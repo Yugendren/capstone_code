@@ -1,0 +1,17 @@
+../Core/Src/main.c:117:13:term_clear	1
+../Core/Src/main.c:137:17:read_adc	2
+../Core/Src/main.c:160:5:__io_putchar	1
+../Core/Src/main.c:207:6:calibrate_all	5
+../Core/Src/main.c:226:6:scan_matrix	3
+../Core/Src/main.c:250:13:adc_read4	2
+../Core/Src/main.c:260:6:calibrate_row	1
+../Core/Src/main.c:285:13:smooth_u32	2
+../Core/Src/main.c:297:5:main	5
+../Core/Src/main.c:608:6:SystemClock_Config	4
+../Core/Src/main.c:658:13:MX_ADC1_Init	4
+../Core/Src/main.c:724:13:MX_ADC2_Init	3
+../Core/Src/main.c:781:13:MX_ADC3_Init	4
+../Core/Src/main.c:847:13:MX_ADC4_Init	3
+../Core/Src/main.c:904:13:MX_USART2_UART_Init	2
+../Core/Src/main.c:939:13:MX_GPIO_Init	1
+../Core/Src/main.c:989:6:Error_Handler	1

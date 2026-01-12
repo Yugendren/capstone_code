@@ -1,0 +1,1015 @@
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2025 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+#include <math.h>   // since you're using powf()
+#include <stdio.h>
+
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE BEGIN 0 */
+#define ADC_OVERSAMPLE_COUNT 16 // We will average 16 readings
+// Columns (ADC1)
+#define COL0_ADC &hadc1
+#define COL0_CH  ADC_CHANNEL_1   // PA0
+
+#define COL1_ADC &hadc1
+#define COL1_CH  ADC_CHANNEL_2   // PA1
+
+#define COL2_ADC &hadc1
+#define COL2_CH  ADC_CHANNEL_6   // PC0
+
+#define COL3_ADC &hadc1
+#define COL3_CH  ADC_CHANNEL_7   // PC1
+
+// Rows
+#define ROW0_ADC &hadc2
+#define ROW0_CH  ADC_CHANNEL_5   // PC4
+
+#define ROW1_ADC &hadc2
+#define ROW1_CH  ADC_CHANNEL_4   // PA7
+
+#define ROW2_ADC &hadc2
+#define ROW2_CH  ADC_CHANNEL_1   // PA4
+
+#define ROW3_ADC &hadc2
+#define ROW3_CH  ADC_CHANNEL_8   // PC2 # DONE
+
+#define ROW4_ADC &hadc2
+#define ROW4_CH  ADC_CHANNEL_3   // PA6
+
+#define ROW5_ADC &hadc3
+#define ROW5_CH  ADC_CHANNEL_1   // PB1
+
+#define ROW6_ADC &hadc4
+#define ROW6_CH  ADC_CHANNEL_3   // PB12
+
+#define ROW7_ADC &hadc4
+#define ROW7_CH  ADC_CHANNEL_4   // PB14
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc2;
+ADC_HandleTypeDef hadc3;
+ADC_HandleTypeDef hadc4;
+
+UART_HandleTypeDef huart2;
+
+/* USER CODE BEGIN PV */
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_ADC2_Init(void);
+static void MX_ADC3_Init(void);
+static void MX_ADC4_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+
+
+// Forward declare
+static uint32_t read_adc(ADC_HandleTypeDef *hadc, uint32_t channel);
+
+// Clear screen and move cursor home
+static void term_clear(void) {
+    printf("\033[2J\033[H"); // ANSI escape: clear + home
+}
+
+// Read single conversion on given ADC/channel
+//static uint32_t read_adc(ADC_HandleTypeDef *hadc, uint32_t channel) {
+//    ADC_ChannelConfTypeDef sConfig = {0};
+//    sConfig.Channel = channel;
+//    sConfig.Rank = ADC_REGULAR_RANK_1;
+//    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+//    sConfig.SamplingTime = ADC_SAMPLETIME_19CYCLES_5; // longer sample for velostat
+//    HAL_ADC_ConfigChannel(hadc, &sConfig);
+//
+//    HAL_ADC_Start(hadc);
+//    HAL_ADC_PollForConversion(hadc, HAL_MAX_DELAY);
+//    uint32_t val = HAL_ADC_GetValue(hadc);
+//    HAL_ADC_Stop(hadc);
+//    return val;
+//}
+// Read single conversion on given ADC/channel
+static uint32_t read_adc(ADC_HandleTypeDef *hadc, uint32_t channel) {
+    ADC_ChannelConfTypeDef sConfig = {0};
+    sConfig.Channel = channel;
+    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+    sConfig.SamplingTime = ADC_SAMPLETIME_19CYCLES_5; // longer sample for velostat
+    HAL_ADC_ConfigChannel(hadc, &sConfig);
+
+    uint32_t adc_total = 0;
+
+    // --- START OF NEW AVERAGING CODE ---
+    for(int i = 0; i < ADC_OVERSAMPLE_COUNT; i++) {
+        HAL_ADC_Start(hadc);
+        HAL_ADC_PollForConversion(hadc, HAL_MAX_DELAY);
+        adc_total += HAL_ADC_GetValue(hadc);
+        HAL_ADC_Stop(hadc);
+    }
+
+    return adc_total / ADC_OVERSAMPLE_COUNT; // Return the average
+    // --- END OF NEW AVERAGING CODE ---
+}
+uint32_t delay_time = 200; // initial blink delay in ms
+// Retarget printf to UART2
+int __io_putchar(int ch)
+{
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
+}
+// ----- Config for 4 channels on ADC1: IN1=PA0, IN2=PA1, IN6=PC0, IN7=PC1 -----
+static const char *labels[4] = {
+  "PA1(IN2)=A1_TopLeft",
+  "PA0(IN1)=A2_TopRight",
+  "PC1(IN7)=A3_BotRight",
+  "PC0(IN6)=A4_BotLeft"
+};
+
+// Corner coordinates of your square (normalize to unit square)
+static const float XY[4][2] = {
+  {0.0f, 0.0f},  // A1 (Top-Left, PA1)
+  {1.0f, 0.0f},  // A2 (Top-Right, PA0)
+  {1.0f, 1.0f},  // A3 (Bottom-Right, PC1)
+  {0.0f, 1.0f}   // A4 (Bottom-Left, PC0)
+};
+
+typedef struct {
+    ADC_HandleTypeDef *hadc;
+    uint32_t channel;
+} ADC_Pin;
+
+ADC_Pin COLS[4] = {
+    {COL0_ADC, COL0_CH},
+    {COL1_ADC, COL1_CH},
+    {COL2_ADC, COL2_CH},
+    {COL3_ADC, COL3_CH}
+};
+
+ADC_Pin ROWS[8] = {
+    {ROW0_ADC, ROW0_CH},
+    {ROW1_ADC, ROW1_CH},
+    {ROW2_ADC, ROW2_CH},
+    {ROW3_ADC, ROW3_CH},
+    {ROW4_ADC, ROW4_CH},
+    {ROW5_ADC, ROW5_CH},
+    {ROW6_ADC, ROW6_CH},
+    {ROW7_ADC, ROW7_CH}
+};
+
+uint32_t row_baseline[8];
+uint32_t col_baseline[4];
+
+void calibrate_all(void) {
+    printf("=== Calibration ===\r\n");
+
+    for (int i = 0; i < 8; i++) {
+        uint32_t acc = 0;
+        for (int k=0; k<32; k++) acc += read_adc(ROWS[i].hadc, ROWS[i].channel);
+        row_baseline[i] = acc / 32;
+        printf("Row%d baseline = %lu\r\n", i, row_baseline[i]);
+    }
+
+    for (int j = 0; j < 4; j++) {
+        uint32_t acc = 0;
+        for (int k=0; k<32; k++) acc += read_adc(COLS[j].hadc, COLS[j].channel);
+        col_baseline[j] = acc / 32;
+        printf("Col%d baseline = %lu\r\n", j, col_baseline[j]);
+    }
+}
+
+
+void scan_matrix(void) {
+    term_clear();
+    printf("=== 4 x 8 Matrix ===\r\n");
+
+    for (int r = 0; r < 8; r++) {
+        uint32_t rv = read_adc(ROWS[r].hadc, ROWS[r].channel);
+        int32_t rdelta = (int32_t)row_baseline[r] - (int32_t)rv;
+
+        printf("R%d |", r);
+        for (int c = 0; c < 4; c++) {
+            uint32_t cv = read_adc(COLS[c].hadc, COLS[c].channel);
+            int32_t cdelta = (int32_t)col_baseline[c] - (int32_t)cv;
+
+            // crude combined "activation"
+            int32_t act = (rdelta + cdelta) / 2;
+            printf(" %4ld", act);
+        }
+        printf(" (rowADC=%ld)\r\n", rdelta);
+    }
+}
+
+static uint32_t baseline[4] = {0,0,0,0};
+static int baseline_ready = 0;
+
+static void adc_read4(uint32_t out[4]) {
+  HAL_ADC_Start(&hadc1);
+  for (int i=0;i<4;i++){
+    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+    out[i] = HAL_ADC_GetValue(&hadc1);
+  }
+  HAL_ADC_Stop(&hadc1);
+}
+
+// Print one row continuously, given its index (0..7)
+void calibrate_row(int row_index) {
+    term_clear();
+    printf("=== Calibrating Row %d ===\r\n", row_index);
+    printf("Press each column pad in this row to see which ADC moves.\r\n");
+
+    while (1) {
+        // Read the selected row ADC
+        uint32_t rv = read_adc(ROWS[row_index].hadc, ROWS[row_index].channel);
+
+        // Read all columns
+        uint32_t c0 = read_adc(COLS[0].hadc, COLS[0].channel);
+        uint32_t c1 = read_adc(COLS[1].hadc, COLS[1].channel);
+        uint32_t c2 = read_adc(COLS[2].hadc, COLS[2].channel);
+        uint32_t c3 = read_adc(COLS[3].hadc, COLS[3].channel);
+
+        term_clear();
+        printf("=== Calibrating Row %d ===\r\n", row_index);
+        printf("RowADC=%lu\r\n", rv);
+        printf("Cols: %4lu %4lu %4lu %4lu\r\n", c0, c1, c2, c3);
+
+        HAL_Delay(300);
+    }
+}
+
+// Simple moving average helper
+static void smooth_u32(uint32_t in[4], float alpha, uint32_t state[4]) {
+  for (int i=0;i<4;i++){
+    state[i] = (uint32_t)((1.0f-alpha)*(float)state[i] + alpha*(float)in[i]);
+  }
+}
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_USART2_UART_Init();
+  MX_ADC1_Init();
+  MX_ADC2_Init();
+  MX_ADC3_Init();
+  MX_ADC4_Init();
+  /* USER CODE BEGIN 2 */
+  // --- Baseline calibration: don't touch the sheet during this ---
+//  {
+//    uint32_t acc[4] = {0,0,0,0};
+//    const int N = 80;
+//    for (int k=0;k<N;k++){
+//      uint32_t v[4]; adc_read4(v);
+//      for (int i=0;i<4;i++) acc[i] += v[i];
+//      HAL_Delay(5);
+//    }
+//    for (int i=0;i<4;i++) baseline[i] = acc[i] / (uint32_t)N;
+//    baseline_ready = 1;
+//    printf("Baseline: %s=%lu  %s=%lu  %s=%lu  %s=%lu\r\n",
+//           labels[0], baseline[0], labels[1], baseline[1],
+//           labels[2], baseline[2], labels[3], baseline[3]);
+//  }
+//  HAL_Delay(5000);
+
+//  calibrate_all();
+//  HAL_Delay(2000);
+// --- ADD THIS ---
+  printf("Starting simple PA0 / PC1 read test...\r\n");
+  HAL_Delay(1000); // Small delay before loop starts
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  /* USER CODE BEGIN WHILE */
+//  while (1) {
+////	  calibrate_row(0);  // <-- choose which row you want to test
+//
+////      scan_matrix();
+////      HAL_Delay(200);
+//      term_clear();
+//      printf("=== 4 x 8 Matrix ===\r\n");
+//
+//      for (int row = 0; row < 8; row++) {
+//          // --- select row ---
+//          // if your rows are tied directly to ADC2/3/4 channels,
+//          // you might instead *drive* row via GPIO and *read* columns here.
+//          // For now: assume rows = 8 ADC channels total.
+//
+//          uint32_t c0 = read_adc(&hadc1, ADC_CHANNEL_1); // PA0
+//          uint32_t c1 = read_adc(&hadc1, ADC_CHANNEL_2); // PA1
+//          uint32_t c2 = read_adc(&hadc1, ADC_CHANNEL_6); // PC0
+//          uint32_t c3 = read_adc(&hadc1, ADC_CHANNEL_7); // PC1
+//
+//          // You’ll need to adjust which ADC/channel corresponds to row X.
+//          // Example placeholders:
+//          uint32_t row_val;
+//          if (row < 2) row_val = read_adc(&hadc2, row==0 ? ADC_CHANNEL_1 : ADC_CHANNEL_2);
+//          else if (row < 4) row_val = read_adc(&hadc3, (row==2)? ADC_CHANNEL_1 : ADC_CHANNEL_2);
+//          else row_val = read_adc(&hadc4, (row==4)? ADC_CHANNEL_1 :
+//                                             (row==5)? ADC_CHANNEL_2 :
+//                                             (row==6)? ADC_CHANNEL_3 : ADC_CHANNEL_4);
+//
+//          // --- print row ---
+//          printf("R%d | %4lu %4lu %4lu %4lu  (rowADC=%lu)\r\n",
+//                 row, c0, c1, c2, c3, row_val);
+//      }
+//
+//      HAL_Delay(200);
+//  }
+  /* USER CODE BEGIN WHILE */
+//  while (1)
+//  {
+//    // --- NEW 2x2 DATA STREAMING CODE ---
+//    uint32_t raw_matrix[2][2];
+//    uint32_t pressure_matrix[2][2];
+//
+//    // === Step 1: Scan Row 0 (PC1) ===
+//    HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET); // Deactivate Row 1 (PC0)
+//    HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_RESET); // Activate Row 0 (PC1)
+//    HAL_Delay(1);
+//
+//    raw_matrix[0][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 0, Col 0) -> PA0
+//    raw_matrix[0][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 0, Col 1) -> PA1
+//
+//    // === Step 2: Scan Row 1 (PC0) ===
+//    HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET); // Deactivate Row 0 (PC1)
+//    HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_RESET); // Activate Row 1 (PC0)
+//    HAL_Delay(1);
+//
+//    raw_matrix[1][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 1, Col 0) -> PA0
+//    raw_matrix[1][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 1, Col 1) -> PA1
+//
+//    // === Step 3: Deactivate all rows ===
+//    HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET);
+//    HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET);
+//
+//    // === Step 4: Process and Print Clean Data ===
+//
+//    // "Flip" the values to get pressure
+//    pressure_matrix[0][0] = (raw_matrix[0][0] > 4050) ? 0 : (4095 - raw_matrix[0][0]);
+//    pressure_matrix[0][1] = (raw_matrix[0][1] > 4050) ? 0 : (4095 - raw_matrix[0][1]);
+//    pressure_matrix[1][0] = (raw_matrix[1][0] > 4050) ? 0 : (4095 - raw_matrix[1][0]);
+//    pressure_matrix[1][1] = (raw_matrix[1][1] > 4050) ? 0 : (4095 - raw_matrix[1][1]);
+//
+//    // Print all 4 values on one line, separated by commas.
+//    // This is the *only* thing you should print.
+//    printf("%lu,%lu,%lu,%lu\n",
+//           pressure_matrix[0][0],
+//           pressure_matrix[0][1],
+//           pressure_matrix[1][0],
+//           pressure_matrix[1][1]
+//    );
+//
+//    HAL_Delay(50); // Send data ~20 times per second
+//
+//    // --- END NEW CODE ---
+//    /* USER CODE END WHILE */
+//
+//    /* USER CODE BEGIN 3 */
+//  }
+  /* USER CODE BEGIN WHILE */
+  //OLD PYTHON
+//    while (1)
+//    {
+//      // --- NEW 2x2 DATA STREAMING CODE ---
+//      uint32_t raw_matrix[2][2];
+//      uint32_t pressure_matrix[2][2];
+//
+//      // === Step 1: Scan Row 0 (PC1) ===
+//      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET); // Deactivate Row 1 (PC0)
+//      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_RESET); // Activate Row 0 (PC1)
+//      HAL_Delay(1);
+//
+//      raw_matrix[0][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 0, Col 0) -> PA0
+//      raw_matrix[0][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 0, Col 1) -> PA1
+//
+//      // === Step 2: Scan Row 1 (PC0) ===
+//      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET); // Deactivate Row 0 (PC1)
+//      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_RESET); // Activate Row 1 (PC0)
+//      HAL_Delay(1);
+//
+//      raw_matrix[1][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 1, Col 0) -> PA0
+//      raw_matrix[1][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 1, Col 1) -> PA1
+//
+//      // === Step 3: Deactivate all rows ===
+//      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET);
+//      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET);
+//
+//      // === Step 4: Process and Print Clean Data ===
+//
+//      // "Flip" the values to get pressure
+//      pressure_matrix[0][0] = (raw_matrix[0][0] > 4050) ? 0 : (4095 - raw_matrix[0][0]);
+//      pressure_matrix[0][1] = (raw_matrix[0][1] > 4050) ? 0 : (4095 - raw_matrix[0][1]);
+//      pressure_matrix[1][0] = (raw_matrix[1][0] > 4050) ? 0 : (4095 - raw_matrix[1][0]);
+//      pressure_matrix[1][1] = (raw_matrix[1][1] > 4050) ? 0 : (4095 - raw_matrix[1][1]);
+//
+//      // Print all 4 values on one line, separated by commas.
+//      // This is the *only* thing you should print.
+//      printf("%lu,%lu,%lu,%lu\n",
+//             pressure_matrix[0][0],
+//             pressure_matrix[0][1],
+//             pressure_matrix[1][0],
+//             pressure_matrix[1][1]
+//      );
+//
+//      HAL_Delay(50); // Send data ~20 times per second
+//
+//      // --- END NEW CODE ---
+//      /* USER CODE END WHILE */
+//
+//      /* USER CODE BEGIN 3 */
+//    }
+    /* USER CODE END 3 */
+    /* USER CODE BEGIN WHILE */
+  /* USER CODE BEGIN WHILE */
+    while (1)
+    {
+      // --- 2x2 DATA STREAMING CODE (NOW FASTER) ---
+      uint32_t raw_matrix[2][2];
+      uint32_t pressure_matrix[2][2];
+
+      // === Step 1: Scan Row 0 (PC1) ===
+      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET); // Deactivate Row 1 (PC0)
+      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_RESET); // Activate Row 0 (PC1)
+      HAL_Delay(1);
+
+      raw_matrix[0][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 0, Col 0) -> PA0
+      raw_matrix[0][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 0, Col 1) -> PA1
+
+      // === Step 2: Scan Row 1 (PC0) ===
+      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET); // Deactivate Row 0 (PC1)
+      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_RESET); // Activate Row 1 (PC0)
+      HAL_Delay(1);
+
+      raw_matrix[1][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 1, Col 0) -> PA0
+      raw_matrix[1][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 1, Col 1) -> PA1
+
+      // === Step 3: Deactivate all rows ===
+      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET);
+
+      // === Step 4: Process and Print Clean Data ===
+      pressure_matrix[0][0] = (raw_matrix[0][0] > 4050) ? 0 : (4095 - raw_matrix[0][0]);
+      pressure_matrix[0][1] = (raw_matrix[0][1] > 4050) ? 0 : (4095 - raw_matrix[0][1]);
+      pressure_matrix[1][0] = (raw_matrix[1][0] > 4050) ? 0 : (4095 - raw_matrix[1][0]);
+      pressure_matrix[1][1] = (raw_matrix[1][1] > 4050) ? 0 : (4095 - raw_matrix[1][1]);
+
+      // Print all 4 values on one line, separated by commas.
+      printf("%lu,%lu,%lu,%lu\n",
+             pressure_matrix[0][0],
+             pressure_matrix[0][1],
+             pressure_matrix[1][0],
+             pressure_matrix[1][1]
+      );
+
+      HAL_Delay(100); // Send data ~50 times per second
+
+      // --- END NEW CODE ---
+      /* USER CODE END WHILE */
+
+      /* USER CODE BEGIN 3 */
+    }
+    /* USER CODE END 3 */
+// HUMAN READABLE
+//    while (1)
+//    {
+//      // --- NEW 2x2 MATRIX SCAN CODE ---
+//      uint32_t raw_matrix[2][2];
+//      uint32_t pressure_matrix[2][2];
+//
+//      // === Step 1: Scan Row 0 (PC1) ===
+//      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET); // Deactivate Row 1 (PC0)
+//      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_RESET); // Activate Row 0 (PC1)
+//      HAL_Delay(1); // Short delay for voltages to settle
+//
+//      raw_matrix[0][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 0, Col 0) -> PA0
+//      raw_matrix[0][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 0, Col 1) -> PA1
+//
+//      // === Step 2: Scan Row 1 (PC0) ===
+//      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET); // Deactivate Row 0 (PC1)
+//      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_RESET); // Activate Row 1 (PC0)
+//      HAL_Delay(1); // Short delay
+//
+//      raw_matrix[1][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 1, Col 0) -> PA0
+//      raw_matrix[1][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 1, Col 1) -> PA1
+//
+//      // === Step 3: Deactivate all rows ===
+//      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET); // Deactivate Row 0
+//      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET); // Deactivate Row 1
+//
+//
+//      // === Step 4: Process and Print the Values ===
+//      term_clear();
+//      printf("2x2 Matrix Read Test:\r\n");
+//      printf("---------------------\r\n");
+//
+//      for (int r = 0; r < 2; r++) {
+//        for (int c = 0; c < 2; c++) {
+//          // "Flip" the value. 4095 (no press) becomes 0.
+//          pressure_matrix[r][c] = (raw_matrix[r][c] > 4050) ? 0 : (4095 - raw_matrix[r][c]);
+//
+//          // Print the processed pressure value
+//          printf("%5lu ", pressure_matrix[r][c]);
+//        }
+//        printf("\r\n"); // New line after each row
+//      }
+//
+//      printf("\r\nRaw ADC Values:\r\n");
+//      printf("%5lu %5lu\r\n", raw_matrix[0][0], raw_matrix[0][1]);
+//      printf("%5lu %5lu\r\n", raw_matrix[1][0], raw_matrix[1][1]);
+//
+//
+//      HAL_Delay(100); // 100ms delay for readability
+//
+//      // --- END NEW CODE ---
+//      /* USER CODE END WHILE */
+//
+//      /* USER CODE BEGIN 3 */
+//    }
+    /* USER CODE END 3 */
+  /* USER CODE END 3 */
+}
+
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_ADC12
+                              |RCC_PERIPHCLK_ADC34;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.Adc12ClockSelection = RCC_ADC12PLLCLK_DIV1;
+  PeriphClkInit.Adc34ClockSelection = RCC_ADC34PLLCLK_DIV1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_MultiModeTypeDef multimode = {0};
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure the ADC multi-mode
+  */
+  multimode.Mode = ADC_MODE_INDEPENDENT;
+  if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief ADC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC2_Init(void)
+{
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+
+  /* USER CODE END ADC2_Init 1 */
+
+  /** Common config
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc2.Init.ContinuousConvMode = DISABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.LowPowerAutoWait = DISABLE;
+  hadc2.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
+
+  /* USER CODE END ADC2_Init 2 */
+
+}
+
+/**
+  * @brief ADC3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC3_Init(void)
+{
+
+  /* USER CODE BEGIN ADC3_Init 0 */
+
+  /* USER CODE END ADC3_Init 0 */
+
+  ADC_MultiModeTypeDef multimode = {0};
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC3_Init 1 */
+
+  /* USER CODE END ADC3_Init 1 */
+
+  /** Common config
+  */
+  hadc3.Instance = ADC3;
+  hadc3.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc3.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc3.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc3.Init.ContinuousConvMode = DISABLE;
+  hadc3.Init.DiscontinuousConvMode = DISABLE;
+  hadc3.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc3.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc3.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc3.Init.NbrOfConversion = 1;
+  hadc3.Init.DMAContinuousRequests = DISABLE;
+  hadc3.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc3.Init.LowPowerAutoWait = DISABLE;
+  hadc3.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  if (HAL_ADC_Init(&hadc3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure the ADC multi-mode
+  */
+  multimode.Mode = ADC_MODE_INDEPENDENT;
+  if (HAL_ADCEx_MultiModeConfigChannel(&hadc3, &multimode) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc3, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC3_Init 2 */
+
+  /* USER CODE END ADC3_Init 2 */
+
+}
+
+/**
+  * @brief ADC4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC4_Init(void)
+{
+
+  /* USER CODE BEGIN ADC4_Init 0 */
+
+  /* USER CODE END ADC4_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC4_Init 1 */
+
+  /* USER CODE END ADC4_Init 1 */
+
+  /** Common config
+  */
+  hadc4.Instance = ADC4;
+  hadc4.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc4.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc4.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc4.Init.ContinuousConvMode = DISABLE;
+  hadc4.Init.DiscontinuousConvMode = DISABLE;
+  hadc4.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc4.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc4.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc4.Init.NbrOfConversion = 1;
+  hadc4.Init.DMAContinuousRequests = DISABLE;
+  hadc4.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc4.Init.LowPowerAutoWait = DISABLE;
+  hadc4.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  if (HAL_ADC_Init(&hadc4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc4, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC4_Init 2 */
+
+  /* USER CODE END ADC4_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, ROW_DRIVE_1_Pin|ROW_DRIVE_0_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : ROW_DRIVE_1_Pin ROW_DRIVE_0_Pin */
+  GPIO_InitStruct.Pin = ROW_DRIVE_1_Pin|ROW_DRIVE_0_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
+}
+
+/* USER CODE BEGIN 4 */
+
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
+  /* USER CODE END Error_Handler_Debug */
+}
+
+#ifdef  USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
