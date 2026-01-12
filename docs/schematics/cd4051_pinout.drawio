@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-01-12T14:30:00.000Z" agent="Capstone Project" version="22.1.0" type="device">
+  <diagram name="CD4051 Pinout" id="cd4051-pinout">
+    <mxGraphModel dx="1000" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        
+        <!-- Title -->
+        <mxCell id="title" value="CD4051 / 74HC4051 Analog Multiplexer - Pin Configuration" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="175" y="10" width="450" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- DIP-16 Package Outline -->
+        <mxCell id="dip16" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#333333;strokeWidth=2" vertex="1" parent="1">
+          <mxGeometry x="300" y="60" width="200" height="280" as="geometry"/>
+        </mxCell>
+        
+        <!-- Notch -->
+        <mxCell id="notch" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="385" y="55" width="30" height="15" as="geometry"/>
+        </mxCell>
+        
+        <!-- Left Pins 1-8 -->
+        <mxCell id="pin1" value="1  Y4" style="text;html=1;align=left;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="310" y="75" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin2" value="2  Y6" style="text;html=1;align=left;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="310" y="105" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin3" value="3  Z (Common)" style="text;html=1;align=left;fontSize=11;fontStyle=1;fillColor=#f8cecc" vertex="1" parent="1">
+          <mxGeometry x="310" y="135" width="90" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin4" value="4  Y7" style="text;html=1;align=left;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="310" y="165" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin5" value="5  Y5" style="text;html=1;align=left;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="310" y="195" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin6" value="6  E̅ (Enable)" style="text;html=1;align=left;fontSize=11;fontStyle=1;fillColor=#d5e8d4" vertex="1" parent="1">
+          <mxGeometry x="310" y="225" width="90" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin7" value="7  VSS (GND)" style="text;html=1;align=left;fontSize=11;fillColor=#333333;fontColor=#ffffff" vertex="1" parent="1">
+          <mxGeometry x="310" y="255" width="90" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin8" value="8  VEE (GND)" style="text;html=1;align=left;fontSize=11;fillColor=#333333;fontColor=#ffffff" vertex="1" parent="1">
+          <mxGeometry x="310" y="285" width="90" height="20" as="geometry"/>
+        </mxCell>
+        
+        <!-- Right Pins 16-9 -->
+        <mxCell id="pin16" value="VDD (3.3V)  16" style="text;html=1;align=right;fontSize=11;fillColor=#ff0000;fontColor=#ffffff" vertex="1" parent="1">
+          <mxGeometry x="410" y="75" width="90" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin15" value="Y2  15" style="text;html=1;align=right;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="420" y="105" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin14" value="Y1  14" style="text;html=1;align=right;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="420" y="135" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin13" value="Y0  13" style="text;html=1;align=right;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="420" y="165" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin12" value="Y3  12" style="text;html=1;align=right;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="420" y="195" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin11" value="S0 (PB0)  11" style="text;html=1;align=right;fontSize=11;fontStyle=1;fillColor=#e1d5e7" vertex="1" parent="1">
+          <mxGeometry x="405" y="225" width="90" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin10" value="S1 (PB1)  10" style="text;html=1;align=right;fontSize=11;fontStyle=1;fillColor=#e1d5e7" vertex="1" parent="1">
+          <mxGeometry x="405" y="255" width="90" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pin9" value="S2 (PB2)  9" style="text;html=1;align=right;fontSize=11;fontStyle=1;fillColor=#e1d5e7" vertex="1" parent="1">
+          <mxGeometry x="405" y="285" width="90" height="20" as="geometry"/>
+        </mxCell>
+        
+        <!-- Truth Table -->
+        <mxCell id="truth_title" value="CHANNEL SELECT TRUTH TABLE" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="550" y="60" width="220" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_header" value="S2  S1  S0  │  Channel" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New;fillColor=#dae8fc" vertex="1" parent="1">
+          <mxGeometry x="550" y="85" width="160" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_0" value=" 0   0   0  │    Y0" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="105" width="160" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_1" value=" 0   0   1  │    Y1" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="123" width="160" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_2" value=" 0   1   0  │    Y2" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="141" width="160" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_3" value=" 0   1   1  │    Y3" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="159" width="160" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_4" value=" 1   0   0  │    Y4" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="177" width="160" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_5" value=" 1   0   1  │    Y5" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="195" width="160" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_6" value=" 1   1   0  │    Y6" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="213" width="160" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="truth_7" value=" 1   1   1  │    Y7" style="text;html=1;align=left;fontSize=10;fontFamily=Courier New" vertex="1" parent="1">
+          <mxGeometry x="550" y="231" width="160" height="18" as="geometry"/>
+        </mxCell>
+        
+        <!-- External Connections -->
+        <mxCell id="ext_title" value="CONNECTIONS FOR ALL 10 MUXES:" style="text;html=1;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="200" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext1" value="• VDD (16) → 3.3V" style="text;html=1;align=left;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="85" width="150" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext2" value="• VSS, VEE (7,8) → GND" style="text;html=1;align=left;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="103" width="150" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext3" value="• S0, S1, S2 → PB0, PB1, PB2" style="text;html=1;align=left;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="121" width="180" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext4" value="• E̅ (6) → Individual PCx pin" style="text;html=1;align=left;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="139" width="180" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext5" value="• Y0-Y7 → Copper strips" style="text;html=1;align=left;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="60" y="157" width="150" height="18" as="geometry"/>
+        </mxCell>
+        
+        <mxCell id="row_z" value="ROW MUXES: Z → PA1" style="text;html=1;align=left;fontSize=10;fillColor=#d5e8d4" vertex="1" parent="1">
+          <mxGeometry x="60" y="185" width="140" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="col_z" value="COL MUXES: Z → PA0 + 1kΩ" style="text;html=1;align=left;fontSize=10;fillColor=#fff2cc" vertex="1" parent="1">
+          <mxGeometry x="60" y="203" width="170" height="18" as="geometry"/>
+        </mxCell>
+        
+        <!-- Active Low Note -->
+        <mxCell id="active_low" value="E̅ = Active LOW&#xa;LOW = Enabled&#xa;HIGH = Disabled (Hi-Z)" style="text;html=1;strokeColor=#82b366;fillColor=#d5e8d4;align=left;fontSize=10;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="280" width="140" height="50" as="geometry"/>
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

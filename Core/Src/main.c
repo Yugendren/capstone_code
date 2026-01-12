@@ -2,7 +2,7 @@
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Main program body
+  * @brief          : 40x40 Piezoelectric Force Sensing Grid - Main Program
   ******************************************************************************
   * @attention
   *
@@ -14,6 +14,25 @@
   * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
+  *
+  *                    SYSTEM OVERVIEW
+  *    ┌───────────────────────────────────────────────────────────┐
+  *    │                                                           │
+  *    │   40×40 Velostat Grid (200×200mm, 5mm copper strips)     │
+  *    │          ↓                           ↓                    │
+  *    │   5× CD4051 (Rows)            5× CD4051 (Cols)           │
+  *    │          ↓                           ↓                    │
+  *    │   PA1 (Row Drive)              PA0 (ADC Input)           │
+  *    │                    ↓                                      │
+  *    │              STM32F303RE                                  │
+  *    │                    ↓                                      │
+  *    │              UART2 (Binary)                              │
+  *    │                    ↓                                      │
+  *    │              Python GUI                                   │
+  *    │                                                           │
+  *    └───────────────────────────────────────────────────────────┘
+  *
+  ******************************************************************************
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
@@ -21,53 +40,28 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <math.h>   // since you're using powf()
 #include <stdio.h>
+#include "grid_mux.h"
+#include "grid_scan.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-/* USER CODE BEGIN 0 */
-#define ADC_OVERSAMPLE_COUNT 16 // We will average 16 readings
-// Columns (ADC1)
-#define COL0_ADC &hadc1
-#define COL0_CH  ADC_CHANNEL_1   // PA0
-
-#define COL1_ADC &hadc1
-#define COL1_CH  ADC_CHANNEL_2   // PA1
-
-#define COL2_ADC &hadc1
-#define COL2_CH  ADC_CHANNEL_6   // PC0
-
-#define COL3_ADC &hadc1
-#define COL3_CH  ADC_CHANNEL_7   // PC1
-
-// Rows
-#define ROW0_ADC &hadc2
-#define ROW0_CH  ADC_CHANNEL_5   // PC4
-
-#define ROW1_ADC &hadc2
-#define ROW1_CH  ADC_CHANNEL_4   // PA7
-
-#define ROW2_ADC &hadc2
-#define ROW2_CH  ADC_CHANNEL_1   // PA4
-
-#define ROW3_ADC &hadc2
-#define ROW3_CH  ADC_CHANNEL_8   // PC2 # DONE
-
-#define ROW4_ADC &hadc2
-#define ROW4_CH  ADC_CHANNEL_3   // PA6
-
-#define ROW5_ADC &hadc3
-#define ROW5_CH  ADC_CHANNEL_1   // PB1
-
-#define ROW6_ADC &hadc4
-#define ROW6_CH  ADC_CHANNEL_3   // PB12
-
-#define ROW7_ADC &hadc4
-#define ROW7_CH  ADC_CHANNEL_4   // PB14
+/**
+ *  @brief  40×40 Grid Scanning System
+ *  
+ *  This replaces the old 2×2 direct ADC/GPIO approach with
+ *  multiplexed scanning for 1600 sensing points.
+ *  
+ *  Pin Configuration:
+ *    - PB0, PB1, PB2: Mux select (S0, S1, S2)
+ *    - PC0-PC4: Row mux enables
+ *    - PC5-PC9: Col mux enables
+ *    - PA0: ADC input (through col muxes)
+ *    - PA1: Row drive output (through row muxes)
+ */
 
 /* USER CODE END PTD */
 
@@ -91,6 +85,12 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
+/**
+ * @brief  Flag to enable/disable calibration on startup
+ *         Set to 1 to calibrate, 0 to skip
+ */
+static uint8_t g_DoCalibration = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,189 +103,52 @@ static void MX_ADC3_Init(void);
 static void MX_ADC4_Init(void);
 /* USER CODE BEGIN PFP */
 
+/**
+ * @brief  Retarget printf to UART2
+ */
+int __io_putchar(int ch);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+/**
+ *  ============================================================================
+ *  40×40 GRID SCANNING SYSTEM
+ *  ============================================================================
+ *  
+ *  Replaces the old 2×2 direct ADC scanning with multiplexed 40×40 grid.
+ *  
+ *  MAIN LOOP OPERATION:
+ *  ┌─────────────────────────────────────────────────────────────┐
+ *  │                                                             │
+ *  │   ┌───────────┐      ┌──────────────┐     ┌────────────┐   │
+ *  │   │  GRID_    │ ───► │  GRID_       │ ──► │  ~25 Hz    │   │
+ *  │   │  ScanMatrix│      │  TransmitData│     │  Loop      │   │
+ *  │   │  (1600     │      │  (Binary     │     │  Rate      │   │
+ *  │   │   cells)   │      │   3206 bytes)│     │            │   │
+ *  │   └───────────┘      └──────────────┘     └────────────┘   │
+ *  │                                                             │
+ *  └─────────────────────────────────────────────────────────────┘
+ *  
+ *  BINARY PROTOCOL:
+ *    Header:  0xAA 0x55 (2 bytes)
+ *    Payload: 1600 × 16-bit values, little-endian (3200 bytes)
+ *    Footer:  Checksum (2 bytes) + CR LF (2 bytes)
+ *    Total:   3206 bytes per frame
+ *  
+ */
 
-
-// Forward declare
-static uint32_t read_adc(ADC_HandleTypeDef *hadc, uint32_t channel);
-
-// Clear screen and move cursor home
-static void term_clear(void) {
-    printf("\033[2J\033[H"); // ANSI escape: clear + home
-}
-
-// Read single conversion on given ADC/channel
-//static uint32_t read_adc(ADC_HandleTypeDef *hadc, uint32_t channel) {
-//    ADC_ChannelConfTypeDef sConfig = {0};
-//    sConfig.Channel = channel;
-//    sConfig.Rank = ADC_REGULAR_RANK_1;
-//    sConfig.SingleDiff = ADC_SINGLE_ENDED;
-//    sConfig.SamplingTime = ADC_SAMPLETIME_19CYCLES_5; // longer sample for velostat
-//    HAL_ADC_ConfigChannel(hadc, &sConfig);
-//
-//    HAL_ADC_Start(hadc);
-//    HAL_ADC_PollForConversion(hadc, HAL_MAX_DELAY);
-//    uint32_t val = HAL_ADC_GetValue(hadc);
-//    HAL_ADC_Stop(hadc);
-//    return val;
-//}
-// Read single conversion on given ADC/channel
-static uint32_t read_adc(ADC_HandleTypeDef *hadc, uint32_t channel) {
-    ADC_ChannelConfTypeDef sConfig = {0};
-    sConfig.Channel = channel;
-    sConfig.Rank = ADC_REGULAR_RANK_1;
-    sConfig.SingleDiff = ADC_SINGLE_ENDED;
-    sConfig.SamplingTime = ADC_SAMPLETIME_19CYCLES_5; // longer sample for velostat
-    HAL_ADC_ConfigChannel(hadc, &sConfig);
-
-    uint32_t adc_total = 0;
-
-    // --- START OF NEW AVERAGING CODE ---
-    for(int i = 0; i < ADC_OVERSAMPLE_COUNT; i++) {
-        HAL_ADC_Start(hadc);
-        HAL_ADC_PollForConversion(hadc, HAL_MAX_DELAY);
-        adc_total += HAL_ADC_GetValue(hadc);
-        HAL_ADC_Stop(hadc);
-    }
-
-    return adc_total / ADC_OVERSAMPLE_COUNT; // Return the average
-    // --- END OF NEW AVERAGING CODE ---
-}
-uint32_t delay_time = 200; // initial blink delay in ms
-// Retarget printf to UART2
+/**
+ * @brief  Retarget printf to UART2 for debug messages
+ * @param  ch: Character to transmit
+ * @retval Character transmitted
+ */
 int __io_putchar(int ch)
 {
-  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-  return ch;
-}
-// ----- Config for 4 channels on ADC1: IN1=PA0, IN2=PA1, IN6=PC0, IN7=PC1 -----
-static const char *labels[4] = {
-  "PA1(IN2)=A1_TopLeft",
-  "PA0(IN1)=A2_TopRight",
-  "PC1(IN7)=A3_BotRight",
-  "PC0(IN6)=A4_BotLeft"
-};
-
-// Corner coordinates of your square (normalize to unit square)
-static const float XY[4][2] = {
-  {0.0f, 0.0f},  // A1 (Top-Left, PA1)
-  {1.0f, 0.0f},  // A2 (Top-Right, PA0)
-  {1.0f, 1.0f},  // A3 (Bottom-Right, PC1)
-  {0.0f, 1.0f}   // A4 (Bottom-Left, PC0)
-};
-
-typedef struct {
-    ADC_HandleTypeDef *hadc;
-    uint32_t channel;
-} ADC_Pin;
-
-ADC_Pin COLS[4] = {
-    {COL0_ADC, COL0_CH},
-    {COL1_ADC, COL1_CH},
-    {COL2_ADC, COL2_CH},
-    {COL3_ADC, COL3_CH}
-};
-
-ADC_Pin ROWS[8] = {
-    {ROW0_ADC, ROW0_CH},
-    {ROW1_ADC, ROW1_CH},
-    {ROW2_ADC, ROW2_CH},
-    {ROW3_ADC, ROW3_CH},
-    {ROW4_ADC, ROW4_CH},
-    {ROW5_ADC, ROW5_CH},
-    {ROW6_ADC, ROW6_CH},
-    {ROW7_ADC, ROW7_CH}
-};
-
-uint32_t row_baseline[8];
-uint32_t col_baseline[4];
-
-void calibrate_all(void) {
-    printf("=== Calibration ===\r\n");
-
-    for (int i = 0; i < 8; i++) {
-        uint32_t acc = 0;
-        for (int k=0; k<32; k++) acc += read_adc(ROWS[i].hadc, ROWS[i].channel);
-        row_baseline[i] = acc / 32;
-        printf("Row%d baseline = %lu\r\n", i, row_baseline[i]);
-    }
-
-    for (int j = 0; j < 4; j++) {
-        uint32_t acc = 0;
-        for (int k=0; k<32; k++) acc += read_adc(COLS[j].hadc, COLS[j].channel);
-        col_baseline[j] = acc / 32;
-        printf("Col%d baseline = %lu\r\n", j, col_baseline[j]);
-    }
-}
-
-
-void scan_matrix(void) {
-    term_clear();
-    printf("=== 4 x 8 Matrix ===\r\n");
-
-    for (int r = 0; r < 8; r++) {
-        uint32_t rv = read_adc(ROWS[r].hadc, ROWS[r].channel);
-        int32_t rdelta = (int32_t)row_baseline[r] - (int32_t)rv;
-
-        printf("R%d |", r);
-        for (int c = 0; c < 4; c++) {
-            uint32_t cv = read_adc(COLS[c].hadc, COLS[c].channel);
-            int32_t cdelta = (int32_t)col_baseline[c] - (int32_t)cv;
-
-            // crude combined "activation"
-            int32_t act = (rdelta + cdelta) / 2;
-            printf(" %4ld", act);
-        }
-        printf(" (rowADC=%ld)\r\n", rdelta);
-    }
-}
-
-static uint32_t baseline[4] = {0,0,0,0};
-static int baseline_ready = 0;
-
-static void adc_read4(uint32_t out[4]) {
-  HAL_ADC_Start(&hadc1);
-  for (int i=0;i<4;i++){
-    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-    out[i] = HAL_ADC_GetValue(&hadc1);
-  }
-  HAL_ADC_Stop(&hadc1);
-}
-
-// Print one row continuously, given its index (0..7)
-void calibrate_row(int row_index) {
-    term_clear();
-    printf("=== Calibrating Row %d ===\r\n", row_index);
-    printf("Press each column pad in this row to see which ADC moves.\r\n");
-
-    while (1) {
-        // Read the selected row ADC
-        uint32_t rv = read_adc(ROWS[row_index].hadc, ROWS[row_index].channel);
-
-        // Read all columns
-        uint32_t c0 = read_adc(COLS[0].hadc, COLS[0].channel);
-        uint32_t c1 = read_adc(COLS[1].hadc, COLS[1].channel);
-        uint32_t c2 = read_adc(COLS[2].hadc, COLS[2].channel);
-        uint32_t c3 = read_adc(COLS[3].hadc, COLS[3].channel);
-
-        term_clear();
-        printf("=== Calibrating Row %d ===\r\n", row_index);
-        printf("RowADC=%lu\r\n", rv);
-        printf("Cols: %4lu %4lu %4lu %4lu\r\n", c0, c1, c2, c3);
-
-        HAL_Delay(300);
-    }
-}
-
-// Simple moving average helper
-static void smooth_u32(uint32_t in[4], float alpha, uint32_t state[4]) {
-  for (int i=0;i<4;i++){
-    state[i] = (uint32_t)((1.0f-alpha)*(float)state[i] + alpha*(float)in[i]);
-  }
+    HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+    return ch;
 }
 
 /* USER CODE END 0 */
@@ -324,29 +187,50 @@ int main(void)
   MX_ADC3_Init();
   MX_ADC4_Init();
   /* USER CODE BEGIN 2 */
-  // --- Baseline calibration: don't touch the sheet during this ---
-//  {
-//    uint32_t acc[4] = {0,0,0,0};
-//    const int N = 80;
-//    for (int k=0;k<N;k++){
-//      uint32_t v[4]; adc_read4(v);
-//      for (int i=0;i<4;i++) acc[i] += v[i];
-//      HAL_Delay(5);
-//    }
-//    for (int i=0;i<4;i++) baseline[i] = acc[i] / (uint32_t)N;
-//    baseline_ready = 1;
-//    printf("Baseline: %s=%lu  %s=%lu  %s=%lu  %s=%lu\r\n",
-//           labels[0], baseline[0], labels[1], baseline[1],
-//           labels[2], baseline[2], labels[3], baseline[3]);
-//  }
-//  HAL_Delay(5000);
-
-//  calibrate_all();
-//  HAL_Delay(2000);
-// --- ADD THIS ---
-  printf("Starting simple PA0 / PC1 read test...\r\n");
-  HAL_Delay(1000); // Small delay before loop starts
-
+  
+  /*
+   *  ════════════════════════════════════════════════════════════════════
+   *  INITIALIZATION SEQUENCE FOR 40×40 GRID
+   *  ════════════════════════════════════════════════════════════════════
+   *  
+   *   Step 1: Print startup banner
+   *   Step 2: Initialize grid scanning system
+   *   Step 3: Optional calibration (if g_DoCalibration = 1)
+   *   Step 4: Enter main scanning loop
+   *  
+   */
+  
+  /* Print startup banner */
+  printf("\r\n");
+  printf("============================================\r\n");
+  printf("  40x40 Piezoelectric Force Sensing Grid   \r\n");
+  printf("  Physiotherapy Training System            \r\n");
+  printf("============================================\r\n");
+  printf("  Grid Size:   40 rows x 40 columns        \r\n");
+  printf("  Resolution:  1600 sensing nodes          \r\n");
+  printf("  Coverage:    200mm x 200mm               \r\n");
+  printf("  Protocol:    Binary (3206 bytes/frame)   \r\n");
+  printf("============================================\r\n");
+  printf("\r\n");
+  
+  /* Initialize the grid scanning system */
+  printf("[INIT] Initializing grid scanning system...\r\n");
+  GRID_Init(&hadc1, &huart2);
+  printf("[INIT] Grid system initialized.\r\n");
+  
+  /* Optional: Perform calibration */
+  if (g_DoCalibration) {
+      printf("[CALIB] Starting calibration - DO NOT TOUCH THE GRID!\r\n");
+      HAL_Delay(2000);  /* Give user time to release */
+      GRID_Calibrate();
+      printf("[CALIB] Calibration complete.\r\n");
+  } else {
+      printf("[INFO] Skipping calibration (g_DoCalibration = 0)\r\n");
+  }
+  
+  printf("\r\n[RUN] Starting main scan loop...\r\n");
+  HAL_Delay(500);
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -495,47 +379,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     while (1)
     {
-      // --- 2x2 DATA STREAMING CODE (NOW FASTER) ---
-      uint32_t raw_matrix[2][2];
-      uint32_t pressure_matrix[2][2];
-
-      // === Step 1: Scan Row 0 (PC1) ===
-      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET); // Deactivate Row 1 (PC0)
-      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_RESET); // Activate Row 0 (PC1)
-      HAL_Delay(1);
-
-      raw_matrix[0][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 0, Col 0) -> PA0
-      raw_matrix[0][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 0, Col 1) -> PA1
-
-      // === Step 2: Scan Row 1 (PC0) ===
-      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET); // Deactivate Row 0 (PC1)
-      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_RESET); // Activate Row 1 (PC0)
-      HAL_Delay(1);
-
-      raw_matrix[1][0] = read_adc(&hadc1, ADC_CHANNEL_1); // Read (Row 1, Col 0) -> PA0
-      raw_matrix[1][1] = read_adc(&hadc1, ADC_CHANNEL_2); // Read (Row 1, Col 1) -> PA1
-
-      // === Step 3: Deactivate all rows ===
-      HAL_GPIO_WritePin(ROW_DRIVE_0_GPIO_Port, ROW_DRIVE_0_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(ROW_DRIVE_1_GPIO_Port, ROW_DRIVE_1_Pin, GPIO_PIN_SET);
-
-      // === Step 4: Process and Print Clean Data ===
-      pressure_matrix[0][0] = (raw_matrix[0][0] > 4050) ? 0 : (4095 - raw_matrix[0][0]);
-      pressure_matrix[0][1] = (raw_matrix[0][1] > 4050) ? 0 : (4095 - raw_matrix[0][1]);
-      pressure_matrix[1][0] = (raw_matrix[1][0] > 4050) ? 0 : (4095 - raw_matrix[1][0]);
-      pressure_matrix[1][1] = (raw_matrix[1][1] > 4050) ? 0 : (4095 - raw_matrix[1][1]);
-
-      // Print all 4 values on one line, separated by commas.
-      printf("%lu,%lu,%lu,%lu\n",
-             pressure_matrix[0][0],
-             pressure_matrix[0][1],
-             pressure_matrix[1][0],
-             pressure_matrix[1][1]
-      );
-
-      HAL_Delay(100); // Send data ~50 times per second
-
-      // --- END NEW CODE ---
+      /*
+       *  ═══════════════════════════════════════════════════════════
+       *  MAIN SCAN LOOP - 40×40 GRID
+       *  ═══════════════════════════════════════════════════════════
+       *  
+       *  This loop:
+       *    1. Scans all 1600 cells (40 rows × 40 columns)
+       *    2. Transmits binary data packet (3206 bytes)
+       *    3. Repeats at ~25 Hz
+       *  
+       *  The scanning and transmission are handled by GRID_ScanLoop()
+       *  which calls GRID_ScanMatrix() and GRID_TransmitData().
+       *  
+       */
+      
+      /* Execute one complete scan + transmit cycle */
+      GRID_ScanLoop();
+      
+      /* 
+       * Toggle LED to show activity (optional)
+       * HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+       */
+      
       /* USER CODE END WHILE */
 
       /* USER CODE BEGIN 3 */

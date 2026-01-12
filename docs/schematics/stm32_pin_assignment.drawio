@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-01-12T14:30:00.000Z" agent="Capstone Project" version="22.1.0" type="device">
+  <diagram name="STM32 Pin Assignment" id="stm32-pins">
+    <mxGraphModel dx="1000" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        
+        <!-- Title -->
+        <mxCell id="title" value="STM32F303RE NUCLEO-64 - GPIO Pin Assignment" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=16;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="200" y="10" width="400" height="30" as="geometry"/>
+        </mxCell>
+        
+        <!-- MCU Block -->
+        <mxCell id="mcu" value="STM32F303RE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="320" y="200" width="160" height="200" as="geometry"/>
+        </mxCell>
+        
+        <!-- MUX SELECT BUS -->
+        <mxCell id="sel_title" value="MUX SELECT BUS" style="text;html=1;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="130" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="pb0" value="PB0 → S0 (all 10 muxes)" style="text;html=1;fontSize=10;fillColor=#e1d5e7" vertex="1" parent="1">
+          <mxGeometry x="60" y="90" width="150" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pb1" value="PB1 → S1 (all 10 muxes)" style="text;html=1;fontSize=10;fillColor=#e1d5e7" vertex="1" parent="1">
+          <mxGeometry x="60" y="112" width="150" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="pb2" value="PB2 → S2 (all 10 muxes)" style="text;html=1;fontSize=10;fillColor=#e1d5e7" vertex="1" parent="1">
+          <mxGeometry x="60" y="134" width="150" height="20" as="geometry"/>
+        </mxCell>
+        
+        <!-- ROW MUX ENABLE -->
+        <mxCell id="row_title" value="ROW MUX ENABLE" style="text;html=1;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="170" width="130" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc0" value="PC0 → Row Mux 0 (rows 0-7)" style="text;html=1;fontSize=10;fillColor=#d5e8d4" vertex="1" parent="1">
+          <mxGeometry x="60" y="200" width="170" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc1" value="PC1 → Row Mux 1 (rows 8-15)" style="text;html=1;fontSize=10;fillColor=#d5e8d4" vertex="1" parent="1">
+          <mxGeometry x="60" y="220" width="175" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc2" value="PC2 → Row Mux 2 (rows 16-23)" style="text;html=1;fontSize=10;fillColor=#d5e8d4" vertex="1" parent="1">
+          <mxGeometry x="60" y="240" width="180" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc3" value="PC3 → Row Mux 3 (rows 24-31)" style="text;html=1;fontSize=10;fillColor=#d5e8d4" vertex="1" parent="1">
+          <mxGeometry x="60" y="260" width="180" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc4" value="PC4 → Row Mux 4 (rows 32-39)" style="text;html=1;fontSize=10;fillColor=#d5e8d4" vertex="1" parent="1">
+          <mxGeometry x="60" y="280" width="180" height="18" as="geometry"/>
+        </mxCell>
+        
+        <!-- COL MUX ENABLE -->
+        <mxCell id="col_title" value="COLUMN MUX ENABLE" style="text;html=1;fontSize=11;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="560" y="60" width="150" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc5" value="PC5 → Col Mux 0 (cols 0-7)" style="text;html=1;fontSize=10;fillColor=#fff2cc" vertex="1" parent="1">
+          <mxGeometry x="560" y="90" width="165" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc6" value="PC6 → Col Mux 1 (cols 8-15)" style="text;html=1;fontSize=10;fillColor=#fff2cc" vertex="1" parent="1">
+          <mxGeometry x="560" y="110" width="170" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc7" value="PC7 → Col Mux 2 (cols 16-23)" style="text;html=1;fontSize=10;fillColor=#fff2cc" vertex="1" parent="1">
+          <mxGeometry x="560" y="130" width="175" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc8" value="PC8 → Col Mux 3 (cols 24-31)" style="text;html=1;fontSize=10;fillColor=#fff2cc" vertex="1" parent="1">
+          <mxGeometry x="560" y="150" width="175" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pc9" value="PC9 → Col Mux 4 (cols 32-39)" style="text;html=1;fontSize=10;fillColor=#fff2cc" vertex="1" parent="1">
+          <mxGeometry x="560" y="170" width="175" height="18" as="geometry"/>
+        </mxCell>
+        
+        <!-- ANALOG/DRIVE -->
+        <mxCell id="analog_title" value="ANALOG / DRIVE" style="text;html=1;fontSize=11;fontStyle=1;fillColor=#f8cecc;strokeColor=#b85450;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="560" y="210" width="120" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa0" value="PA0 → ADC1_IN1 (Column sense)" style="text;html=1;fontSize=10;fillColor=#f8cecc" vertex="1" parent="1">
+          <mxGeometry x="560" y="240" width="190" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa1" value="PA1 → Row Drive (3.3V output)" style="text;html=1;fontSize=10;fillColor=#f8cecc" vertex="1" parent="1">
+          <mxGeometry x="560" y="260" width="185" height="18" as="geometry"/>
+        </mxCell>
+        
+        <!-- POWER -->
+        <mxCell id="pwr_title" value="POWER" style="text;html=1;fontSize=11;fontStyle=1;fillColor=#f5f5f5;strokeColor=#666666;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="560" y="300" width="70" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="v33" value="3.3V → All mux VDD pins" style="text;html=1;fontSize=10;fillColor=#ff0000;fontColor=#ffffff" vertex="1" parent="1">
+          <mxGeometry x="560" y="330" width="150" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="gnd" value="GND → All mux VSS/VEE pins" style="text;html=1;fontSize=10;fillColor=#333333;fontColor=#ffffff" vertex="1" parent="1">
+          <mxGeometry x="560" y="350" width="175" height="18" as="geometry"/>
+        </mxCell>
+        
+        <!-- UART -->
+        <mxCell id="uart_title" value="UART (Data Output)" style="text;html=1;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="60" y="320" width="130" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa2" value="PA2 → USART2_TX" style="text;html=1;fontSize=10;fillColor=#dae8fc" vertex="1" parent="1">
+          <mxGeometry x="60" y="350" width="130" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa3" value="PA3 → USART2_RX" style="text;html=1;fontSize=10;fillColor=#dae8fc" vertex="1" parent="1">
+          <mxGeometry x="60" y="370" width="130" height="18" as="geometry"/>
+        </mxCell>
+        
+        <!-- Note -->
+        <mxCell id="note" value="ALL GPIO: 3.3V LOGIC LEVELS" style="text;html=1;strokeColor=#d6b656;fillColor=#fff2cc;align=center;fontSize=12;fontStyle=1;rounded=1" vertex="1" parent="1">
+          <mxGeometry x="290" y="430" width="220" height="30" as="geometry"/>
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
