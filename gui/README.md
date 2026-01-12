@@ -41,8 +41,33 @@ Click **Demo Mode** to see simulated pressure data for testing.
 |--------|-------------|
 | Click heatmap | Select cell for waveform display |
 | Connect | Start receiving data from STM32 |
-| Demo Mode | Simulate pressure data |
-| Calibrate | (Placeholder) Trigger calibration |
+| Demo Mode | Simulate pressure data (including spine palpation) |
+| **Calibrate Spine** | Start wizard to detect L1-L5 landmarks |
+| Load/Save | Save calibration for specific patients |
+
+## Spinal Landmark Detection
+
+The GUI includes a teaching system for spinal palpation:
+
+### 1. Calibration Wizard
+1. Click **Calibrate Spine**
+2. Click **Start Recording**
+3. Drag finger firmly along the spine (top to bottom)
+4. The system detects the midline and segments L1-L5 automatically
+
+### 2. Teaching Feedback Zones
+Based on velostat capabilities (0-15N range):
+
+| Zone | Feedback | Color |
+|------|----------|-------|
+| **< 0.5N** | No Contact | Grey |
+| **0.5 - 2N** | Too Light | 🟡 Yellow |
+| **2 - 8N** | **Correct Palpation** | 🟢 Green |
+| **8 - 12N** | Firm Contact | 🟠 Orange |
+| **> 12N** | Too Hard | 🔴 Red |
+
+### 3. Movement Speed
+Optimized for steady scanning speed (5-12 cells/sec). Quick movements or being stationary will trigger warnings.
 
 ## Data Protocol
 

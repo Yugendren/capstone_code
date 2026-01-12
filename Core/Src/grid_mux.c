@@ -55,9 +55,7 @@ const MuxEnablePin_t RowMuxEnablePins[MUX_ROW_COUNT] = {
 const MuxEnablePin_t ColMuxEnablePins[MUX_COL_COUNT] = {
     { COL_MUX0_EN_PORT, COL_MUX0_EN_PIN },  /* PC5 - Cols 0-7 */
     { COL_MUX1_EN_PORT, COL_MUX1_EN_PIN },  /* PC6 - Cols 8-15 */
-    { COL_MUX2_EN_PORT, COL_MUX2_EN_PIN },  /* PC7 - Cols 16-23 */
-    { COL_MUX3_EN_PORT, COL_MUX3_EN_PIN },  /* PC8 - Cols 24-31 */
-    { COL_MUX4_EN_PORT, COL_MUX4_EN_PIN }   /* PC9 - Cols 32-39 */
+    { COL_MUX2_EN_PORT, COL_MUX2_EN_PIN }   /* PC7 - Cols 16-23 */
 };
 
 /* Private function prototypes -----------------------------------------------*/

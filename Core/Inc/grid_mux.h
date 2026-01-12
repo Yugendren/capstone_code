@@ -62,8 +62,8 @@ extern "C" {
  * @{
  */
 #define GRID_NUM_ROWS           40U     /**< Number of rows in the grid */
-#define GRID_NUM_COLS           40U     /**< Number of columns in the grid */
-#define GRID_TOTAL_NODES        (GRID_NUM_ROWS * GRID_NUM_COLS)  /**< 1600 total sensing points */
+#define GRID_NUM_COLS           24U     /**< Number of columns in the grid */
+#define GRID_TOTAL_NODES        (GRID_NUM_ROWS * GRID_NUM_COLS)  /**< 960 total sensing points */
 /** @} */
 
 /**
@@ -73,8 +73,8 @@ extern "C" {
  */
 #define MUX_CHANNELS_PER_CHIP   8U      /**< Each CD4051 has 8 channels (Y0-Y7) */
 #define MUX_ROW_COUNT           5U      /**< 5 muxes for 40 rows (5 x 8 = 40) */
-#define MUX_COL_COUNT           5U      /**< 5 muxes for 40 columns (5 x 8 = 40) */
-#define MUX_TOTAL_COUNT         10U     /**< Total multiplexer chips */
+#define MUX_COL_COUNT           3U      /**< 3 muxes for 24 columns (3 x 8 = 24) */
+#define MUX_TOTAL_COUNT         8U      /**< Total multiplexer chips */
 /** @} */
 
 /**
