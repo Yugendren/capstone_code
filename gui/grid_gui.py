@@ -53,9 +53,9 @@ from spine_detector import (
 # Constants
 # ============================================================================
 
-GRID_ROWS = 40
-GRID_COLS = 24
-GRID_TOTAL = GRID_ROWS * GRID_COLS  # 960
+GRID_ROWS = 16
+GRID_COLS = 32
+GRID_TOTAL = GRID_ROWS * GRID_COLS  # 512
 
 # Binary protocol
 SYNC_BYTE_1 = 0xAA

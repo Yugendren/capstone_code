@@ -1,53 +1,78 @@
 # Piezoelectric Force Sensing Grid (Physiotherapy Training)
 
-A 40×24 velostat-based pressure sensing grid for spinal physiotherapy training, featuring real-time visualization, spinal landmark detection, and palpation feedback.
+A 16×32 force sensing grid using ADS1220 24-bit ADCs for spinal physiotherapy training.
 
 ## System Overview
 
-*   **Hardware**: STM32F303RE Nucleo + 8x CD4051 Multiplexers + Velostat Grid
-*   **Grid Dimensions**: 40 Rows × 24 Columns (5mm spacing)
-*   **Resolution**: 960 sensing points
-*   **Communication**: Binary protocol over UART (USB Serial) @ 115200 baud
-*   **Software**: Python Desktop GUI (PyQt6 + PyQtGraph)
+| Component | Details |
+|-----------|---------|
+| **MCU** | STM32F303RE Nucleo |
+| **ADCs** | 8× ADS1220 (4 channels each = 32 columns) |
+| **Grid Size** | 16 rows × 32 columns = **512 cells** |
+| **Physical Size** | 80mm × 160mm (at 5mm spacing) |
+| **Communication** | Binary protocol over UART @ 115200 baud |
+| **GUI** | Python (PyQt6 + PyQtGraph) |
 
-## Directory Structure
+## Pin Assignments
 
-*   `Core/` - STM32 Firmware source code
-    *   `Inc/grid_mux.h` - Multiplexer configuration & pin definitions
-    *   `Inc/grid_scan.h` - Scanning engine & binary protocol
-    *   `Src/main.c` - Main application entry
-*   `gui/` - PC Application
-    *   `grid_gui.py` - Main GUI application
-    *   `spine_detector.py` - Spinal landmark detection logic
-    *   `README.md` - GUI-specific usage instructions
-*   `docs/` - Documentation
-    *   `schematics/` - Wiring diagrams and system overview
-    *   `CUBEIDE_SETUP.md` - STM32CubeIDE configuration guide
+```
+ROW DRIVERS (PC0-PC15):
+┌─────────────────────────────────────┐
+│  PC0  → Row 0      PC8  → Row 8    │
+│  PC1  → Row 1      PC9  → Row 9    │
+│  PC2  → Row 2      PC10 → Row 10   │
+│  PC3  → Row 3      PC11 → Row 11   │
+│  PC4  → Row 4      PC12 → Row 12   │
+│  PC5  → Row 5      PC13 → Row 13   │
+│  PC6  → Row 6      PC14 → Row 14   │
+│  PC7  → Row 7      PC15 → Row 15   │
+└─────────────────────────────────────┘
+
+SPI BUS (to all 8 ADS1220):
+┌─────────────────────────────────────┐
+│  PB13 → SCK                        │
+│  PB14 → MISO (DOUT)                │
+│  PB15 → MOSI (DIN)                 │
+└─────────────────────────────────────┘
+
+CHIP SELECT (Active LOW):
+┌─────────────────────────────────────┐
+│  PA0 → CS0 (Cols 0-3)              │
+│  PA1 → CS1 (Cols 4-7)              │
+│  PA4 → CS2 (Cols 8-11)             │
+│  PA5 → CS3 (Cols 12-15)            │
+│  PA6 → CS4 (Cols 16-19)            │
+│  PA7 → CS5 (Cols 20-23)            │
+│  PA8 → CS6 (Cols 24-27)            │
+│  PA9 → CS7 (Cols 28-31)            │
+└─────────────────────────────────────┘
+
+UART (USB Serial):
+  PA2 → TX, PA3 → RX
+```
 
 ## Quick Start
 
-### 1. Hardware Setup
-Connect the 40x24 grid to the STM32 via the multiplexer circuitry.
-*   **5 Row Muxes**: Enable pins PC0-PC4
-*   **3 Column Muxes**: Enable pins PC5-PC7
-*   **Select Lines**: PB0 (S0), PB1 (S1), PB2 (S2)
-*   **Analog**: PA1 (Drive), PA0 (Sense)
+### Firmware
+1. Open in STM32CubeIDE
+2. Configure SPI2 (PB13/14/15)
+3. Configure GPIO outputs (PC0-PC15, PA0/1/4-9)
+4. Build and flash
 
-### 2. Firmware
-1.  Open project in **STM32CubeIDE**.
-2.  Compile and flash to the Nucleo board.
-3.  Reset the board.
+### GUI
+```bash
+cd gui
+pip install -r requirements.txt
+python grid_gui.py
+```
 
-### 3. Software
-1.  Install Python dependencies: `pip install -r gui/requirements.txt`
-2.  Run the GUI: `python gui/grid_gui.py`
-3.  Select COM port and click **Connect**.
+## Files
 
-## Key Features
-
-*   **Real-time Heatmap**: Visualizes pressure distribution @ ~25 Hz.
-*   **Spinal Calibration**: Detects L1-L5 vertebrae from a simple drag gesture.
-*   **Teaching Feedback**:
-    *   **Pressure**: Color-coded feedback (Yellow < Green < Red) for palpation force (0-15N).
-    *   **Speed**: Monitors scanning speed for optimal technique.
-*   **Waveform Analysis**: View force-over-time for any selected cell.
+| Path | Description |
+|------|-------------|
+| `Core/Inc/ads1220.h` | ADS1220 driver header |
+| `Core/Src/ads1220.c` | ADS1220 SPI driver |
+| `Core/Inc/grid_scan.h` | Grid scanning header |
+| `Core/Src/grid_scan.c` | 16×32 scanning engine |
+| `gui/grid_gui.py` | Main GUI application |
+| `gui/spine_detector.py` | Spinal landmark detection |
