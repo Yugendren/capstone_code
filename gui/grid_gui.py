@@ -1,13 +1,14 @@
 """
 ================================================================================
-40×40 Piezoelectric Force Sensing Grid - GUI Application
+20×12 Piezoelectric Force Sensing Grid - GUI Application
 ================================================================================
 
 Physiotherapy Training System - Real-time pressure visualization with spinal
 landmark detection and palpation feedback.
 
 Features:
-- Real-time 40×40 heatmap display with landmark overlay
+- Real-time 20×12 heatmap display with landmark overlay
+- Hardware setup mode for GPIO/ADC configuration
 - Spine-line calibration workflow
 - L1-L5 vertebra visualization
 - Palpation pressure feedback (0-15N velostat range)
@@ -19,7 +20,7 @@ Usage:
     python grid_gui.py
 
 Author: Capstone Project
-Date: 2026-01-12
+Date: 2026-01-24
 ================================================================================
 """
 
@@ -48,22 +49,26 @@ from spine_detector import (
     SpinalLandmark, SpineCalibration
 )
 
+# Import hardware configuration and setup
+from hardware_config import HardwareConfig, get_default_config, save_default_config
+from setup_dialog import SetupModeDialog
+
 
 # ============================================================================
 # Constants
 # ============================================================================
 
-GRID_ROWS = 16
-GRID_COLS = 32
-GRID_TOTAL = GRID_ROWS * GRID_COLS  # 512
+GRID_ROWS = 12
+GRID_COLS = 20
+GRID_TOTAL = GRID_ROWS * GRID_COLS  # 240
 
 # Binary protocol
 SYNC_BYTE_1 = 0xAA
 SYNC_BYTE_2 = 0x55
 HEADER_SIZE = 2
-PAYLOAD_SIZE = GRID_TOTAL * 2  # 3200 bytes (16-bit values)
+PAYLOAD_SIZE = GRID_TOTAL * 2  # 480 bytes (16-bit values)
 FOOTER_SIZE = 4  # 2-byte checksum + CR + LF
-PACKET_SIZE = HEADER_SIZE + PAYLOAD_SIZE + FOOTER_SIZE  # 3206 bytes
+PACKET_SIZE = HEADER_SIZE + PAYLOAD_SIZE + FOOTER_SIZE  # 486 bytes
 
 # Waveform history
 WAVEFORM_HISTORY_SIZE = 200  # ~8 seconds at 25 Hz
@@ -87,7 +92,7 @@ ACCENT_PURPLE = "#cba6f7"
 class SerialReader(QThread):
     """Background thread for reading serial data."""
     
-    data_received = pyqtSignal(np.ndarray)  # Emits 40x40 numpy array
+    data_received = pyqtSignal(np.ndarray)  # Emits grid numpy array
     error_occurred = pyqtSignal(str)
     
     def __init__(self, port: str, baudrate: int = 115200):
@@ -473,7 +478,7 @@ class GridVisualizerWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("40×40 Force Sensing Grid - Physiotherapy Training")
+        self.setWindowTitle("20×12 Force Sensing Grid - Physiotherapy Training")
         self.setMinimumSize(1400, 900)
         
         # Data storage
@@ -490,9 +495,13 @@ class GridVisualizerWindow(QMainWindow):
         # Spine detection
         self.spine_detector = SpineDetector()
         self.movement_tracker = MovementTracker()
-        
+
         # Calibration dialog reference
         self.calibration_dialog: Optional[CalibrationDialog] = None
+
+        # Hardware configuration
+        self.hardware_config = get_default_config()
+        self.setup_dialog: Optional[SetupModeDialog] = None
         
         # Apply dark theme
         self._apply_dark_theme()
@@ -691,17 +700,23 @@ class GridVisualizerWindow(QMainWindow):
         btn_layout.addWidget(self.demo_btn)
         controls_layout.addLayout(btn_layout)
         
+        # Setup Mode button
+        self.setup_btn = QPushButton("⚙ Hardware Setup Mode")
+        self.setup_btn.clicked.connect(self._open_setup_mode)
+        self.setup_btn.setStyleSheet(f"background-color: {ACCENT_PURPLE}; color: {DARK_BG};")
+        controls_layout.addWidget(self.setup_btn)
+
         # Calibration buttons
         calib_layout = QHBoxLayout()
         self.calibrate_btn = QPushButton("🎯 Calibrate Spine")
         self.calibrate_btn.clicked.connect(self._start_calibration)
         calib_layout.addWidget(self.calibrate_btn)
-        
+
         self.load_calib_btn = QPushButton("📂 Load")
         self.load_calib_btn.clicked.connect(self._load_calibration)
         self.load_calib_btn.setMaximumWidth(60)
         calib_layout.addWidget(self.load_calib_btn)
-        
+
         self.save_calib_btn = QPushButton("💾 Save")
         self.save_calib_btn.clicked.connect(self._save_calibration)
         self.save_calib_btn.setMaximumWidth(60)
@@ -808,6 +823,10 @@ class GridVisualizerWindow(QMainWindow):
         # If calibrating, send frame to dialog
         if self.calibration_dialog and self.calibration_dialog._is_recording:
             self.calibration_dialog.add_frame(data)
+
+        # If in setup mode, send frame to setup dialog
+        if self.setup_dialog and self.setup_dialog.isVisible():
+            self.setup_dialog.update_frame(data)
         
         # Update movement tracker
         pos, speed = self.movement_tracker.update(data, current_time)
@@ -915,6 +934,24 @@ class GridVisualizerWindow(QMainWindow):
                 self.status_bar.showMessage(f"Calibration loaded from {filepath}")
             else:
                 self.status_bar.showMessage("Failed to load calibration")
+
+    def _open_setup_mode(self):
+        """Open hardware setup mode dialog."""
+        self.setup_dialog = SetupModeDialog(
+            grid_rows=GRID_ROWS,
+            grid_cols=GRID_COLS,
+            initial_config=self.hardware_config,
+            parent=self
+        )
+        self.setup_dialog.config_updated.connect(self._on_config_updated)
+        self.setup_dialog.show()
+        self.status_bar.showMessage("Hardware setup mode active - press on grid to configure")
+
+    def _on_config_updated(self, config: HardwareConfig):
+        """Handle updated hardware configuration."""
+        self.hardware_config = config
+        save_default_config(config)
+        self.status_bar.showMessage("Hardware configuration updated and saved")
     
     def closeEvent(self, event):
         """Clean up on window close."""

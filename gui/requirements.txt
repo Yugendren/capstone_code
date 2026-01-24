@@ -1,15 +1,24 @@
-# 40x40 Force Sensing Grid - Python GUI Requirements
+# 20×12 Force Sensing Grid - Python GUI Requirements
+# Physiotherapy Training System
 # Install with: pip install -r requirements.txt
 
 # Core GUI frameworks
-PyQt6>=6.4.0                    # Modern Qt bindings for Python
-pyqtgraph>=0.13.0               # Fast real-time plotting
+PyQt6>=6.7.0                    # Modern Qt bindings for Python (GUI framework)
+pyqtgraph>=0.13.7               # Fast real-time plotting and visualization
 
 # Serial communication
-pyserial>=3.5                   # Serial port communication
+pyserial>=3.5                   # Serial port communication with STM32
 
 # Data processing
-numpy>=1.24.0                   # Numerical operations
+numpy>=1.26.0                   # Numerical operations and array processing
 
-# Optional: for additional visualization
-# matplotlib>=3.7.0             # Alternative plotting (not used by default)
+# Standard library modules (included with Python, listed for reference):
+# - sys: System-specific parameters and functions
+# - struct: Binary data packing/unpacking
+# - time: Time access and conversions
+# - collections: Specialized container datatypes (deque)
+# - typing: Type hints support
+# - pathlib: Object-oriented filesystem paths
+# - dataclasses: Data class decorator
+# - json: JSON encoder/decoder
+# - datetime: Date and time handling
