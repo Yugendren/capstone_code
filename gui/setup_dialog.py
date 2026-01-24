@@ -7,8 +7,10 @@ Interactive dialog for configuring GPIO and ADC pin mappings by physically
 testing the pressure sensing grid.
 
 Features:
+- Professional Apple-inspired UI design
 - Visual grid representation showing detected presses
-- Row-by-row GPIO configuration workflow
+- Guided row-by-row GPIO configuration sequence with animation
+- Auto-detect when force applied to each row
 - ADC channel detection and mapping
 - Real-time validation
 - Configuration export
@@ -23,37 +25,121 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem, QLineEdit, QTextEdit,
     QGroupBox, QSpinBox, QProgressBar, QMessageBox, QFileDialog,
-    QHeaderView, QComboBox
+    QHeaderView, QComboBox, QFrame, QStackedWidget, QWidget
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPropertyAnimation, QEasingCurve, QRect
+from PyQt6.QtGui import QFont, QColor, QPainter, QPen, QBrush, QLinearGradient
 import pyqtgraph as pg
 
 from hardware_config import HardwareConfig, save_default_config
 
 
-# UI Colors (matching main GUI)
-DARK_BG = "#1e1e2e"
-DARK_SURFACE = "#313244"
-DARK_TEXT = "#cdd6f4"
-ACCENT_BLUE = "#89b4fa"
-ACCENT_GREEN = "#a6e3a1"
-ACCENT_RED = "#f38ba8"
-ACCENT_YELLOW = "#f9e2af"
-ACCENT_ORANGE = "#fab387"
+# Professional Apple-Inspired Color Palette
+COLORS = {
+    'bg_primary': '#000000',
+    'bg_secondary': '#1c1c1e',
+    'bg_tertiary': '#2c2c2e',
+    'bg_quaternary': '#3a3a3c',
+    'text_primary': '#ffffff',
+    'text_secondary': '#8e8e93',
+    'text_tertiary': '#636366',
+    'accent_blue': '#0a84ff',
+    'accent_green': '#30d158',
+    'accent_red': '#ff453a',
+    'accent_orange': '#ff9f0a',
+    'accent_yellow': '#ffd60a',
+    'accent_purple': '#bf5af2',
+    'accent_teal': '#64d2ff',
+    'separator': '#38383a',
+}
+
+
+class AnimatedRowIndicator(QWidget):
+    """Visual indicator showing which row to press with pulsing animation."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_row = 0
+        self.total_rows = 12
+        self.pulse_phase = 0
+        self.is_active = False
+
+        # Pulse animation timer
+        self.pulse_timer = QTimer()
+        self.pulse_timer.timeout.connect(self._update_pulse)
+        self.pulse_timer.setInterval(50)
+
+    def set_row(self, row: int, total_rows: int = 12):
+        self.current_row = row
+        self.total_rows = total_rows
+        self.update()
+
+    def start_animation(self):
+        self.is_active = True
+        self.pulse_timer.start()
+
+    def stop_animation(self):
+        self.is_active = False
+        self.pulse_timer.stop()
+        self.update()
+
+    def _update_pulse(self):
+        self.pulse_phase = (self.pulse_phase + 1) % 60
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        width = self.width()
+        height = self.height()
+        row_height = height / self.total_rows
+
+        # Draw all rows
+        for i in range(self.total_rows):
+            y = i * row_height
+
+            if i == self.current_row and self.is_active:
+                # Animated highlight for current row
+                pulse_intensity = 0.5 + 0.5 * np.sin(self.pulse_phase * 0.2)
+                alpha = int(100 + 100 * pulse_intensity)
+
+                gradient = QLinearGradient(0, y, width, y)
+                color = QColor(COLORS['accent_blue'])
+                color.setAlpha(alpha)
+                gradient.setColorAt(0, color)
+                gradient.setColorAt(0.5, QColor(COLORS['accent_blue']))
+                gradient.setColorAt(1, color)
+
+                painter.fillRect(QRect(0, int(y), width, int(row_height)), gradient)
+
+                # Arrow indicator
+                painter.setPen(QPen(QColor(COLORS['text_primary']), 2))
+                arrow_x = width - 25
+                arrow_y = y + row_height / 2
+                painter.drawLine(int(arrow_x - 10), int(arrow_y), int(arrow_x), int(arrow_y))
+                painter.drawLine(int(arrow_x - 5), int(arrow_y - 5), int(arrow_x), int(arrow_y))
+                painter.drawLine(int(arrow_x - 5), int(arrow_y + 5), int(arrow_x), int(arrow_y))
+            else:
+                # Normal row background
+                color = QColor(COLORS['bg_tertiary']) if i % 2 == 0 else QColor(COLORS['bg_secondary'])
+                painter.fillRect(QRect(0, int(y), width, int(row_height)), color)
+
+            # Row label
+            painter.setPen(QPen(QColor(COLORS['text_secondary'])))
+            font = QFont("-apple-system", 10)
+            painter.setFont(font)
+            painter.drawText(8, int(y + row_height / 2 + 4), f"Row {i}")
 
 
 class SetupModeDialog(QDialog):
     """
     Dialog for hardware configuration setup mode.
 
-    Workflow:
-    1. User presses on physical grid row by row
-    2. System detects which row has activity
-    3. User assigns GPIO pin name to detected row
-    4. Repeat for all rows
-    5. Configure ADC channels
-    6. Save configuration
+    Features:
+    - Guided calibration sequence with visual indicators
+    - Auto-detection of active rows
+    - Professional Apple-inspired UI
     """
 
     config_updated = pyqtSignal(HardwareConfig)
@@ -64,7 +150,6 @@ class SetupModeDialog(QDialog):
         self.grid_rows = grid_rows
         self.grid_cols = grid_cols
 
-        # Load or create configuration
         if initial_config:
             self.config = initial_config
         else:
@@ -72,176 +157,323 @@ class SetupModeDialog(QDialog):
 
         # State tracking
         self.current_frame = np.zeros((grid_rows, grid_cols), dtype=np.uint16)
-        self.row_activity_history = {i: [] for i in range(grid_rows)}
         self.detected_row = None
         self.is_monitoring = False
-        self.current_setup_row = 0
 
-        self.setWindowTitle("Hardware Setup Mode")
-        self.setMinimumSize(1000, 800)
+        # Calibration sequence state
+        self.sequence_active = False
+        self.sequence_row = 0
+        self.sequence_gpio_prefix = "GPIO_"
+
+        # Detection parameters
+        self.detection_threshold = 500
+        self.detection_hold_frames = 5
+        self.detection_counter = 0
+        self.last_detected_row = None
+
+        self.setWindowTitle("Hardware Setup")
+        self.setMinimumSize(1100, 800)
         self.setModal(True)
 
         self._build_ui()
+        self._apply_style()
         self._update_table()
 
+    def _apply_style(self):
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {COLORS['bg_primary']};
+                color: {COLORS['text_primary']};
+            }}
+            QLabel {{
+                color: {COLORS['text_primary']};
+                font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+            }}
+            QGroupBox {{
+                background-color: {COLORS['bg_secondary']};
+                border: none;
+                border-radius: 12px;
+                margin-top: 8px;
+                padding: 16px;
+                font-weight: 500;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 16px;
+                padding: 0 8px;
+                color: {COLORS['text_secondary']};
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }}
+            QPushButton {{
+                background-color: {COLORS['bg_tertiary']};
+                color: {COLORS['text_primary']};
+                border: none;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 500;
+                font-size: 13px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['bg_quaternary']};
+            }}
+            QPushButton:disabled {{
+                background-color: {COLORS['bg_tertiary']};
+                color: {COLORS['text_tertiary']};
+            }}
+            QLineEdit {{
+                background-color: {COLORS['bg_tertiary']};
+                border: none;
+                border-radius: 8px;
+                padding: 10px 12px;
+                color: {COLORS['text_primary']};
+                font-size: 13px;
+            }}
+            QLineEdit:focus {{
+                background-color: {COLORS['bg_quaternary']};
+            }}
+            QTableWidget {{
+                background-color: {COLORS['bg_secondary']};
+                alternate-background-color: {COLORS['bg_tertiary']};
+                gridline-color: {COLORS['separator']};
+                border: none;
+                border-radius: 8px;
+            }}
+            QTableWidget::item {{
+                padding: 8px;
+            }}
+            QHeaderView::section {{
+                background-color: {COLORS['bg_tertiary']};
+                color: {COLORS['text_secondary']};
+                border: none;
+                padding: 8px;
+                font-weight: 500;
+                font-size: 11px;
+                text-transform: uppercase;
+            }}
+            QTextEdit {{
+                background-color: {COLORS['bg_tertiary']};
+                border: none;
+                border-radius: 8px;
+                color: {COLORS['text_primary']};
+                padding: 12px;
+            }}
+            QProgressBar {{
+                border: none;
+                border-radius: 4px;
+                background-color: {COLORS['bg_tertiary']};
+                height: 8px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {COLORS['accent_blue']};
+                border-radius: 4px;
+            }}
+        """)
+
     def _build_ui(self):
-        """Build the user interface."""
         layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setContentsMargins(24, 24, 24, 24)
 
-        # Title and instructions
-        title = QLabel("⚙ Hardware Configuration Setup")
-        title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        title.setStyleSheet(f"color: {ACCENT_BLUE}; padding: 10px;")
-        layout.addWidget(title)
+        # Header
+        header_layout = QHBoxLayout()
 
-        instructions = QLabel(
-            "Configure GPIO pin mappings by pressing on each row of the physical grid.\n"
-            "The system will detect which row is active and allow you to assign the GPIO pin."
+        title = QLabel("Hardware Configuration")
+        title.setFont(QFont("-apple-system", 22, QFont.Weight.DemiBold))
+        header_layout.addWidget(title)
+
+        header_layout.addStretch()
+
+        layout.addLayout(header_layout)
+
+        # Description
+        desc = QLabel(
+            "Configure GPIO pin mappings by pressing on each row of the physical grid. "
+            "Use the guided sequence or manually assign pins."
         )
-        instructions.setWordWrap(True)
-        instructions.setStyleSheet(f"color: {DARK_TEXT}; padding: 5px; font-size: 11px;")
-        layout.addWidget(instructions)
+        desc.setWordWrap(True)
+        desc.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 13px; margin-bottom: 8px;")
+        layout.addWidget(desc)
 
-        # Main horizontal layout
-        main_h_layout = QHBoxLayout()
+        # Main content
+        main_layout = QHBoxLayout()
+        main_layout.setSpacing(16)
 
-        # Left: Visual grid
+        # Left: Grid visualization
         left_panel = QVBoxLayout()
+        left_panel.setSpacing(12)
 
-        grid_group = QGroupBox("Grid Activity Monitor")
-        grid_layout = QVBoxLayout(grid_group)
+        grid_group = QGroupBox("Grid Activity")
+        grid_layout = QHBoxLayout(grid_group)
+        grid_layout.setSpacing(12)
 
+        # Animated row indicator
+        self.row_indicator = AnimatedRowIndicator()
+        self.row_indicator.set_row(0, self.grid_rows)
+        self.row_indicator.setFixedWidth(100)
+        grid_layout.addWidget(self.row_indicator)
+
+        # Heatmap
         self.grid_widget = pg.PlotWidget()
         self.grid_widget.setAspectLocked(True)
         self.grid_widget.hideAxis('left')
         self.grid_widget.hideAxis('bottom')
-        self.grid_widget.setMinimumHeight(400)
+        self.grid_widget.setBackground(COLORS['bg_tertiary'])
 
         self.grid_image = pg.ImageItem()
         self.grid_widget.addItem(self.grid_image)
 
-        # Colormap
-        colors = [(0, 0, 128), (0, 255, 255), (0, 255, 0), (255, 255, 0), (255, 0, 0)]
+        colors = [(0, 0, 40), (0, 180, 220), (60, 220, 60), (255, 140, 0), (255, 40, 40)]
         positions = np.linspace(0, 1, len(colors))
         colormap = pg.ColorMap(positions, colors)
         self.grid_image.setLookupTable(colormap.getLookupTable())
         self.grid_image.setLevels([0, 4095])
         self.grid_image.setImage(self.current_frame.T)
 
-        grid_layout.addWidget(self.grid_widget)
-
-        # Detection status
-        self.detection_label = QLabel("Waiting for press...")
-        self.detection_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.detection_label.setStyleSheet(f"color: {ACCENT_YELLOW}; font-weight: bold; font-size: 12px;")
-        grid_layout.addWidget(self.detection_label)
+        grid_layout.addWidget(self.grid_widget, stretch=1)
 
         left_panel.addWidget(grid_group)
-        main_h_layout.addLayout(left_panel, stretch=2)
 
-        # Right: Configuration table and controls
+        # Detection status
+        status_group = QGroupBox("Detection Status")
+        status_layout = QVBoxLayout(status_group)
+
+        self.detection_label = QLabel("Waiting for input...")
+        self.detection_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.detection_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 14px;")
+        status_layout.addWidget(self.detection_label)
+
+        self.detection_progress = QProgressBar()
+        self.detection_progress.setRange(0, self.detection_hold_frames)
+        self.detection_progress.setValue(0)
+        self.detection_progress.setTextVisible(False)
+        status_layout.addWidget(self.detection_progress)
+
+        left_panel.addWidget(status_group)
+
+        main_layout.addLayout(left_panel, stretch=2)
+
+        # Right: Configuration
         right_panel = QVBoxLayout()
+        right_panel.setSpacing(12)
 
-        # Row configuration table
-        table_group = QGroupBox("Row GPIO Configuration")
+        # Calibration sequence controls
+        sequence_group = QGroupBox("Guided Calibration")
+        sequence_layout = QVBoxLayout(sequence_group)
+
+        sequence_desc = QLabel(
+            "Start the guided sequence to automatically configure each row. "
+            "Press on the highlighted row when prompted."
+        )
+        sequence_desc.setWordWrap(True)
+        sequence_desc.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 12px;")
+        sequence_layout.addWidget(sequence_desc)
+
+        # GPIO prefix input
+        prefix_layout = QHBoxLayout()
+        prefix_label = QLabel("GPIO Prefix:")
+        prefix_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 12px;")
+        prefix_layout.addWidget(prefix_label)
+
+        self.prefix_input = QLineEdit("GPIOA_PIN")
+        self.prefix_input.setFixedWidth(150)
+        prefix_layout.addWidget(self.prefix_input)
+
+        prefix_layout.addStretch()
+        sequence_layout.addLayout(prefix_layout)
+
+        # Sequence buttons
+        btn_layout = QHBoxLayout()
+
+        self.start_sequence_btn = QPushButton("Start Sequence")
+        self.start_sequence_btn.clicked.connect(self._start_sequence)
+        self.start_sequence_btn.setStyleSheet(f"background-color: {COLORS['accent_green']}; color: {COLORS['bg_primary']};")
+        btn_layout.addWidget(self.start_sequence_btn)
+
+        self.stop_sequence_btn = QPushButton("Stop")
+        self.stop_sequence_btn.clicked.connect(self._stop_sequence)
+        self.stop_sequence_btn.setEnabled(False)
+        btn_layout.addWidget(self.stop_sequence_btn)
+
+        sequence_layout.addLayout(btn_layout)
+
+        # Sequence progress
+        self.sequence_label = QLabel("")
+        self.sequence_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sequence_label.setStyleSheet(f"color: {COLORS['accent_blue']}; font-weight: 600;")
+        sequence_layout.addWidget(self.sequence_label)
+
+        right_panel.addWidget(sequence_group)
+
+        # Configuration table
+        table_group = QGroupBox("Pin Mapping")
         table_layout = QVBoxLayout(table_group)
 
         self.config_table = QTableWidget(self.grid_rows, 3)
         self.config_table.setHorizontalHeaderLabels(["Row", "GPIO Pin", "Status"])
         self.config_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.config_table.setMaximumHeight(300)
+        self.config_table.verticalHeader().setVisible(False)
+        self.config_table.setAlternatingRowColors(True)
         table_layout.addWidget(self.config_table)
 
         right_panel.addWidget(table_group)
 
-        # Current row setup
-        setup_group = QGroupBox("Configure Current Row")
-        setup_layout = QVBoxLayout(setup_group)
+        # Manual configuration
+        manual_group = QGroupBox("Manual Configuration")
+        manual_layout = QVBoxLayout(manual_group)
 
-        row_select_layout = QHBoxLayout()
-        row_select_layout.addWidget(QLabel("Row to Configure:"))
+        row_layout = QHBoxLayout()
+        row_layout.addWidget(QLabel("Row:"))
         self.row_spinbox = QSpinBox()
         self.row_spinbox.setRange(0, self.grid_rows - 1)
-        self.row_spinbox.setValue(0)
-        self.row_spinbox.valueChanged.connect(self._on_row_changed)
-        row_select_layout.addWidget(self.row_spinbox)
-        setup_layout.addLayout(row_select_layout)
+        self.row_spinbox.setFixedWidth(60)
+        row_layout.addWidget(self.row_spinbox)
 
-        gpio_layout = QHBoxLayout()
-        gpio_layout.addWidget(QLabel("GPIO Pin:"))
+        row_layout.addWidget(QLabel("GPIO:"))
         self.gpio_input = QLineEdit()
-        self.gpio_input.setPlaceholderText("e.g., GPIOA_0, PB1")
-        gpio_layout.addWidget(self.gpio_input)
-        setup_layout.addLayout(gpio_layout)
+        self.gpio_input.setPlaceholderText("e.g., GPIOA_PIN0")
+        row_layout.addWidget(self.gpio_input, stretch=1)
 
-        btn_layout = QHBoxLayout()
-        self.assign_btn = QPushButton("✓ Assign GPIO to Row")
+        self.assign_btn = QPushButton("Assign")
         self.assign_btn.clicked.connect(self._assign_gpio)
-        self.assign_btn.setStyleSheet(f"background-color: {ACCENT_GREEN}; color: {DARK_BG};")
-        btn_layout.addWidget(self.assign_btn)
+        row_layout.addWidget(self.assign_btn)
 
-        self.auto_detect_btn = QPushButton("🔍 Auto-Detect")
-        self.auto_detect_btn.clicked.connect(self._toggle_auto_detect)
-        btn_layout.addWidget(self.auto_detect_btn)
-        setup_layout.addLayout(btn_layout)
-
-        self.auto_status = QLabel("")
-        self.auto_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        setup_layout.addWidget(self.auto_status)
-
-        right_panel.addWidget(setup_group)
-
-        # ADC Configuration
-        adc_group = QGroupBox("ADC Channel Configuration")
-        adc_layout = QVBoxLayout(adc_group)
-
-        adc_info = QLabel("Configure ADC channels used for column scanning:")
-        adc_info.setWordWrap(True)
-        adc_layout.addWidget(adc_info)
-
-        self.adc_table = QTableWidget(2, 2)
-        self.adc_table.setHorizontalHeaderLabels(["Channel", "ADC Name"])
-        self.adc_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.adc_table.setMaximumHeight(120)
-
-        for i in range(2):
-            self.adc_table.setItem(i, 0, QTableWidgetItem(f"Channel {i}"))
-            adc_name = self.config.get_adc_channel(i) or f"ADC1_IN{i}"
-            adc_input = QLineEdit(adc_name)
-            self.adc_table.setCellWidget(i, 1, adc_input)
-
-        adc_layout.addWidget(self.adc_table)
-        right_panel.addWidget(adc_group)
+        manual_layout.addLayout(row_layout)
+        right_panel.addWidget(manual_group)
 
         # Validation
-        validation_group = QGroupBox("Configuration Status")
+        validation_group = QGroupBox("Validation")
         validation_layout = QVBoxLayout(validation_group)
 
         self.validation_text = QTextEdit()
         self.validation_text.setReadOnly(True)
-        self.validation_text.setMaximumHeight(100)
+        self.validation_text.setMaximumHeight(80)
         validation_layout.addWidget(self.validation_text)
 
-        self.validate_btn = QPushButton("🔍 Validate Config")
+        self.validate_btn = QPushButton("Validate Configuration")
         self.validate_btn.clicked.connect(self._validate_config)
         validation_layout.addWidget(self.validate_btn)
 
         right_panel.addWidget(validation_group)
 
-        main_h_layout.addLayout(right_panel, stretch=1)
-        layout.addLayout(main_h_layout)
+        main_layout.addLayout(right_panel, stretch=1)
+        layout.addLayout(main_layout, stretch=1)
 
         # Bottom buttons
         bottom_layout = QHBoxLayout()
+        bottom_layout.setSpacing(12)
 
-        self.save_btn = QPushButton("💾 Save Configuration")
+        self.save_btn = QPushButton("Save Configuration")
         self.save_btn.clicked.connect(self._save_config)
-        self.save_btn.setStyleSheet(f"background-color: {ACCENT_BLUE}; color: {DARK_BG};")
+        self.save_btn.setStyleSheet(f"background-color: {COLORS['accent_blue']}; color: {COLORS['text_primary']};")
         bottom_layout.addWidget(self.save_btn)
 
-        self.export_btn = QPushButton("📤 Export C Header")
+        self.export_btn = QPushButton("Export C Header")
         self.export_btn.clicked.connect(self._export_header)
         bottom_layout.addWidget(self.export_btn)
+
+        bottom_layout.addStretch()
 
         self.close_btn = QPushButton("Close")
         self.close_btn.clicked.connect(self.accept)
@@ -249,186 +481,178 @@ class SetupModeDialog(QDialog):
 
         layout.addLayout(bottom_layout)
 
-        # Apply dark theme
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {DARK_BG};
-                color: {DARK_TEXT};
-            }}
-            QGroupBox {{
-                border: 1px solid {DARK_SURFACE};
-                border-radius: 8px;
-                margin-top: 12px;
-                padding-top: 10px;
-                font-weight: bold;
-            }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-            }}
-            QPushButton {{
-                background-color: {DARK_SURFACE};
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: {ACCENT_BLUE};
-                color: {DARK_BG};
-            }}
-            QLineEdit {{
-                background-color: {DARK_SURFACE};
-                border: 1px solid {DARK_SURFACE};
-                border-radius: 4px;
-                padding: 5px;
-                color: {DARK_TEXT};
-            }}
-            QTableWidget {{
-                background-color: {DARK_SURFACE};
-                alternate-background-color: {DARK_BG};
-                gridline-color: {DARK_BG};
-            }}
-            QTextEdit {{
-                background-color: {DARK_SURFACE};
-                border: 1px solid {DARK_BG};
-                border-radius: 4px;
-                color: {DARK_TEXT};
-            }}
-        """)
-
     def _update_table(self):
         """Update the configuration table with current settings."""
         for row in range(self.grid_rows):
             # Row number
-            self.config_table.setItem(row, 0, QTableWidgetItem(str(row)))
+            row_item = QTableWidgetItem(str(row))
+            row_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.config_table.setItem(row, 0, row_item)
 
             # GPIO pin
             gpio = self.config.get_row_gpio(row) or "UNDEFINED"
             gpio_item = QTableWidgetItem(gpio)
             if "UNDEFINED" in gpio:
-                gpio_item.setForeground(QColor(ACCENT_RED))
+                gpio_item.setForeground(QColor(COLORS['accent_red']))
             else:
-                gpio_item.setForeground(QColor(ACCENT_GREEN))
+                gpio_item.setForeground(QColor(COLORS['accent_green']))
             self.config_table.setItem(row, 1, gpio_item)
 
             # Status
-            status = "✓ Configured" if "UNDEFINED" not in gpio else "⚠ Not Set"
+            is_configured = "UNDEFINED" not in gpio
+            status = "Configured" if is_configured else "Not Set"
             status_item = QTableWidgetItem(status)
-            status_item.setForeground(QColor(ACCENT_GREEN if "✓" in status else ACCENT_YELLOW))
+            status_item.setForeground(QColor(COLORS['accent_green'] if is_configured else COLORS['accent_yellow']))
             self.config_table.setItem(row, 2, status_item)
 
-    def _on_row_changed(self, row):
-        """Handle row selection change."""
-        self.current_setup_row = row
-        gpio = self.config.get_row_gpio(row)
-        if gpio and "UNDEFINED" not in gpio:
-            self.gpio_input.setText(gpio)
+    def _start_sequence(self):
+        """Start the guided calibration sequence."""
+        self.sequence_active = True
+        self.sequence_row = 0
+        self.sequence_gpio_prefix = self.prefix_input.text().strip() or "GPIO_"
+
+        self.start_sequence_btn.setEnabled(False)
+        self.stop_sequence_btn.setEnabled(True)
+        self.is_monitoring = True
+
+        self.row_indicator.set_row(0, self.grid_rows)
+        self.row_indicator.start_animation()
+
+        self._update_sequence_ui()
+
+    def _stop_sequence(self):
+        """Stop the calibration sequence."""
+        self.sequence_active = False
+        self.is_monitoring = False
+
+        self.start_sequence_btn.setEnabled(True)
+        self.stop_sequence_btn.setEnabled(False)
+        self.sequence_label.setText("")
+
+        self.row_indicator.stop_animation()
+
+    def _update_sequence_ui(self):
+        """Update UI for current sequence step."""
+        if not self.sequence_active:
+            return
+
+        if self.sequence_row >= self.grid_rows:
+            # Sequence complete
+            self._stop_sequence()
+            self.sequence_label.setText("Calibration Complete")
+            self.sequence_label.setStyleSheet(f"color: {COLORS['accent_green']}; font-weight: 600;")
+            QMessageBox.information(self, "Complete", "All rows have been configured.")
+            return
+
+        self.row_indicator.set_row(self.sequence_row, self.grid_rows)
+        self.sequence_label.setText(f"Press on Row {self.sequence_row}")
+        self.sequence_label.setStyleSheet(f"color: {COLORS['accent_blue']}; font-weight: 600;")
+
+    def _advance_sequence(self, detected_row: int):
+        """Advance to next row in sequence after successful detection."""
+        if not self.sequence_active:
+            return
+
+        if detected_row == self.sequence_row:
+            # Auto-assign GPIO
+            gpio_pin = f"{self.sequence_gpio_prefix}{self.sequence_row}"
+            self.config.set_row_gpio(self.sequence_row, gpio_pin)
+            self._update_table()
+
+            # Flash success
+            self.detection_label.setText(f"Row {self.sequence_row} configured as {gpio_pin}")
+            self.detection_label.setStyleSheet(f"color: {COLORS['accent_green']}; font-size: 14px; font-weight: 600;")
+
+            # Move to next row
+            self.sequence_row += 1
+            QTimer.singleShot(500, self._update_sequence_ui)
+
+    def update_frame(self, frame: np.ndarray):
+        """Update with new frame from serial data."""
+        self.current_frame = frame
+        self.grid_image.setImage(frame.T, autoLevels=False)
+
+        if self.is_monitoring or self.sequence_active:
+            self._detect_active_row(frame)
+
+    def _detect_active_row(self, frame: np.ndarray):
+        """Detect which row has the most activity."""
+        row_sums = np.sum(frame, axis=1)
+        max_row = int(np.argmax(row_sums))
+        max_value = row_sums[max_row]
+
+        if max_value > self.detection_threshold:
+            if max_row == self.last_detected_row:
+                self.detection_counter += 1
+            else:
+                self.detection_counter = 1
+                self.last_detected_row = max_row
+
+            self.detection_progress.setValue(min(self.detection_counter, self.detection_hold_frames))
+
+            if self.detection_counter >= self.detection_hold_frames:
+                # Confirmed detection
+                self.detected_row = max_row
+                self.detection_label.setText(f"Detected: Row {max_row}")
+                self.detection_label.setStyleSheet(f"color: {COLORS['accent_green']}; font-size: 14px; font-weight: 600;")
+
+                # Set spinbox to detected row
+                self.row_spinbox.setValue(max_row)
+
+                # If in sequence mode, advance
+                if self.sequence_active:
+                    self._advance_sequence(max_row)
+
+                # Reset counter for next detection
+                self.detection_counter = 0
         else:
-            self.gpio_input.clear()
+            self.detection_counter = 0
+            self.last_detected_row = None
+            self.detection_progress.setValue(0)
+
+            if not self.sequence_active:
+                self.detection_label.setText("Waiting for input...")
+                self.detection_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 14px;")
 
     def _assign_gpio(self):
-        """Assign GPIO pin to current row."""
+        """Assign GPIO pin to selected row."""
+        row = self.row_spinbox.value()
         gpio_pin = self.gpio_input.text().strip()
+
         if not gpio_pin:
             QMessageBox.warning(self, "Invalid Input", "Please enter a GPIO pin name.")
             return
 
         try:
-            self.config.set_row_gpio(self.current_setup_row, gpio_pin)
+            self.config.set_row_gpio(row, gpio_pin)
             self._update_table()
-            QMessageBox.information(self, "Success",
-                                    f"GPIO '{gpio_pin}' assigned to Row {self.current_setup_row}")
+            self.gpio_input.clear()
 
-            # Move to next row
-            if self.current_setup_row < self.grid_rows - 1:
-                self.row_spinbox.setValue(self.current_setup_row + 1)
+            # Highlight the configured row briefly
+            self.detection_label.setText(f"Row {row} set to {gpio_pin}")
+            self.detection_label.setStyleSheet(f"color: {COLORS['accent_green']}; font-size: 14px; font-weight: 600;")
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to assign GPIO: {e}")
 
-    def _toggle_auto_detect(self):
-        """Toggle auto-detection mode."""
-        self.is_monitoring = not self.is_monitoring
-        if self.is_monitoring:
-            self.auto_detect_btn.setText("⏹ Stop Detection")
-            self.auto_detect_btn.setStyleSheet(f"background-color: {ACCENT_RED}; color: {DARK_BG};")
-            self.auto_status.setText("Press on the physical grid...")
-            self.auto_status.setStyleSheet(f"color: {ACCENT_GREEN};")
-        else:
-            self.auto_detect_btn.setText("🔍 Auto-Detect")
-            self.auto_detect_btn.setStyleSheet("")
-            self.auto_status.setText("")
-
-    def update_frame(self, frame: np.ndarray):
-        """
-        Update with new frame from serial data.
-        Call this from main GUI when in setup mode.
-        """
-        self.current_frame = frame
-        self.grid_image.setImage(frame.T, autoLevels=False)
-
-        # Detect active row
-        self._detect_active_row(frame)
-
-    def _detect_active_row(self, frame: np.ndarray):
-        """Detect which row has the most activity."""
-        row_sums = np.sum(frame, axis=1)
-        max_row = np.argmax(row_sums)
-        max_value = row_sums[max_row]
-
-        # Threshold for detection
-        if max_value > 1000:  # Significant pressure
-            self.detected_row = max_row
-            self.detection_label.setText(f"✓ Row {max_row} detected (pressure: {max_value:.0f})")
-            self.detection_label.setStyleSheet(f"color: {ACCENT_GREEN}; font-weight: bold; font-size: 12px;")
-
-            # If in auto-detect mode, suggest this row
-            if self.is_monitoring:
-                self.row_spinbox.setValue(max_row)
-                self.auto_status.setText(f"✓ Detected Row {max_row} - Enter GPIO pin above")
-                self.auto_status.setStyleSheet(f"color: {ACCENT_GREEN}; font-weight: bold;")
-        else:
-            self.detected_row = None
-            if not self.is_monitoring:
-                self.detection_label.setText("Waiting for press...")
-                self.detection_label.setStyleSheet(f"color: {ACCENT_YELLOW}; font-weight: bold; font-size: 12px;")
-
     def _validate_config(self):
         """Validate the current configuration."""
-        # Update ADC configuration from table
-        for i in range(2):
-            adc_input = self.adc_table.cellWidget(i, 1)
-            if isinstance(adc_input, QLineEdit):
-                adc_name = adc_input.text().strip()
-                if adc_name:
-                    self.config.set_adc_channel(i, adc_name)
-
-        # Validate
         issues = self.config.validate()
 
         if not issues:
             self.validation_text.setHtml(
-                f"<span style='color: {ACCENT_GREEN}; font-weight: bold;'>"
-                "✓ Configuration is valid!</span>"
+                f"<span style='color: {COLORS['accent_green']}; font-weight: bold;'>"
+                "Configuration is valid</span>"
             )
         else:
-            issue_text = "<br>".join([f"⚠ {issue}" for issue in issues])
+            issue_text = "<br>".join([f"- {issue}" for issue in issues])
             self.validation_text.setHtml(
-                f"<span style='color: {ACCENT_RED};'><b>Configuration Issues:</b><br>{issue_text}</span>"
+                f"<span style='color: {COLORS['accent_red']};'>"
+                f"<b>Issues found:</b><br>{issue_text}</span>"
             )
 
     def _save_config(self):
         """Save configuration to file."""
-        # Update ADC config first
-        for i in range(2):
-            adc_input = self.adc_table.cellWidget(i, 1)
-            if isinstance(adc_input, QLineEdit):
-                adc_name = adc_input.text().strip()
-                if adc_name:
-                    self.config.set_adc_channel(i, adc_name)
-
         filepath, _ = QFileDialog.getSaveFileName(
             self, "Save Hardware Configuration", "hardware_config.json", "JSON Files (*.json)"
         )
@@ -437,11 +661,10 @@ class SetupModeDialog(QDialog):
             try:
                 self.config.save(filepath)
                 save_default_config(self.config)
-                QMessageBox.information(self, "Success",
-                                        f"Configuration saved to:\n{filepath}")
+                QMessageBox.information(self, "Saved", f"Configuration saved to:\n{filepath}")
                 self.config_updated.emit(self.config)
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to save configuration:\n{e}")
+                QMessageBox.critical(self, "Error", f"Failed to save:\n{e}")
 
     def _export_header(self):
         """Export configuration as C header file."""
@@ -452,7 +675,6 @@ class SetupModeDialog(QDialog):
         if filepath:
             try:
                 self.config.export_c_header(filepath)
-                QMessageBox.information(self, "Success",
-                                        f"C header exported to:\n{filepath}")
+                QMessageBox.information(self, "Exported", f"C header exported to:\n{filepath}")
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to export header:\n{e}")
+                QMessageBox.critical(self, "Error", f"Failed to export:\n{e}")
