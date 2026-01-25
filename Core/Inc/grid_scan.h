@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
  * @file           : grid_scan.h
- * @brief          : 16x32 Grid Scanning Engine Header (ADS1220 Version)
+ * @brief          : 12x20 Grid Scanning Engine Header (ADS1220 Version)
  * @author         : Capstone Project
  * @date           : 2026-01-13
  ******************************************************************************
@@ -9,17 +9,17 @@
  *                    SYSTEM ARCHITECTURE
  *    ┌─────────────────────────────────────────────────────────────────┐
  *    │                                                                 │
- *    │   16 ROWS (GPIO PC0-PC15)          32 COLUMNS (8x ADS1220)     │
- *    │   ═══════════════════════          ════════════════════════     │
+ *    │   12 ROWS (GPIO PC0-PC11)          20 COLUMNS (5x ADS1220)     │
+ *    │   ═══════════════════════          ══════════════════════       │
  *    │                                                                 │
  *    │   PC0  ──────┬───┬───┬─── ... ───┬───┬──── AIN0-3 (Chip 0)     │
  *    │   PC1  ──────┼───┼───┼─── ... ───┼───┼──── AIN0-3 (Chip 1)     │
- *    │   PC2  ──────┼───┼───┼─── ... ───┼───┼──── ...                 │
- *    │    ⋮         ⋮   ⋮   ⋮           ⋮   ⋮                         │
- *    │   PC15 ──────┴───┴───┴─── ... ───┴───┴──── AIN0-3 (Chip 7)     │
+ *    │   PC2  ──────┼───┼───┼─── ... ───┼───┼──── AIN0-3 (Chip 2)     │
+ *    │    ⋮         ⋮   ⋮   ⋮           ⋮   ⋮     AIN0-3 (Chip 3)     │
+ *    │   PC11 ──────┴───┴───┴─── ... ───┴───┴──── AIN0-3 (Chip 4)     │
  *    │                                                                 │
- *    │   Grid: 16 rows × 32 columns = 512 sensing points              │
- *    │   Physical size: 80mm × 160mm (at 5mm spacing)                 │
+ *    │   Grid: 12 rows × 20 columns = 240 sensing points              │
+ *    │   Physical size: 60mm × 100mm (at 5mm spacing)                 │
  *    │                                                                 │
  *    └─────────────────────────────────────────────────────────────────┘
  *
@@ -43,9 +43,9 @@ extern "C" {
  * @defgroup GRID_DIMENSIONS Grid Dimensions
  * @{
  */
-#define GRID_NUM_ROWS           16U     /**< 16 rows driven by GPIO PC0-PC15 */
-#define GRID_NUM_COLS           32U     /**< 32 columns from 8x ADS1220 */
-#define GRID_TOTAL_NODES        (GRID_NUM_ROWS * GRID_NUM_COLS)  /**< 512 */
+#define GRID_NUM_ROWS           12U     /**< 12 rows driven by GPIO PC0-PC11 */
+#define GRID_NUM_COLS           20U     /**< 20 columns from 5x ADS1220 (4 channels each) */
+#define GRID_TOTAL_NODES        (GRID_NUM_ROWS * GRID_NUM_COLS)  /**< 240 */
 /** @} */
 
 /**
@@ -55,18 +55,18 @@ extern "C" {
 #define PACKET_SYNC_BYTE_1      0xAAU
 #define PACKET_SYNC_BYTE_2      0x55U
 #define PACKET_HEADER_SIZE      2U
-#define PACKET_PAYLOAD_SIZE     (GRID_TOTAL_NODES * 2U)  /**< 512 x 2 = 1024 bytes */
+#define PACKET_PAYLOAD_SIZE     (GRID_TOTAL_NODES * 2U)  /**< 240 x 2 = 480 bytes */
 #define PACKET_FOOTER_SIZE      4U
-#define PACKET_TOTAL_SIZE       (PACKET_HEADER_SIZE + PACKET_PAYLOAD_SIZE + PACKET_FOOTER_SIZE)
+#define PACKET_TOTAL_SIZE       (PACKET_HEADER_SIZE + PACKET_PAYLOAD_SIZE + PACKET_FOOTER_SIZE)  /**< 486 bytes */
 /** @} */
 
 /**
  * @defgroup ROW_GPIO Row GPIO Configuration
- * @brief Using GPIOC for all 16 row drivers
+ * @brief Using GPIOC for 12 row drivers
  * @{
  */
 #define ROW_GPIO_PORT           GPIOC
-#define ROW_GPIO_PINS           0xFFFFU  /**< PC0-PC15 */
+#define ROW_GPIO_PINS           0x0FFFU  /**< PC0-PC11 (12 bits) */
 /** @} */
 
 /**
@@ -103,7 +103,7 @@ extern GridData_t g_GridData;
 
 /**
  * @brief  Initialize the grid scanning system
- * @param  hspi: Pointer to SPI handle for ADS1220 communication
+ * @param  hspi: Pointer to SPI handle for ADS1220 communication (not used if using internal ADCs)
  * @param  huart: Pointer to UART handle for data streaming
  */
 void GRID_Init(SPI_HandleTypeDef *hspi, UART_HandleTypeDef *huart);
@@ -114,7 +114,7 @@ void GRID_Init(SPI_HandleTypeDef *hspi, UART_HandleTypeDef *huart);
 void GRID_Calibrate(void);
 
 /**
- * @brief  Scan the entire 16x32 grid once
+ * @brief  Scan the entire 12x20 grid once
  */
 void GRID_ScanMatrix(void);
 
@@ -130,7 +130,7 @@ void GRID_ScanLoop(void);
 
 /**
  * @brief  Enable a specific row (set GPIO high)
- * @param  row: Row index (0-15)
+ * @param  row: Row index (0-11)
  */
 void GRID_EnableRow(uint8_t row);
 

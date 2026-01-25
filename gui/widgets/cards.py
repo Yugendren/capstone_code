@@ -167,8 +167,8 @@ class StatDisplay(QWidget):
     def _setup_text_label(self, label: str) -> None:
         """Create and configure the text label."""
         label_widget = QLabel(label)
-        label_widget.setFont(QFont("Comic Sans MS", 10))
-        label_widget.setStyleSheet(f"color: {COLORS['text_light']};")
+        label_widget.setFont(QFont("Comic Sans MS", 11))
+        label_widget.setStyleSheet(f"color: {COLORS['text_light']}; padding: 2px 0px;")
         label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(label_widget)
 

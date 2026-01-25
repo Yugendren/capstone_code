@@ -63,6 +63,7 @@ RECORDING_FPS: int = 25
 # ADC (Analog-to-Digital Converter) Range
 # =============================================================================
 
-# The STM32 ADC provides 12-bit resolution
+# ADS1220 provides 24-bit resolution, scaled to 16-bit for transmission
+# Firmware performs right-shift by 8 bits: 24-bit -> 16-bit
 ADC_MIN: int = 0
-ADC_MAX: int = 4095  # 2^12 - 1
+ADC_MAX: int = 65535  # 2^16 - 1 (16-bit range from scaled ADS1220 values)

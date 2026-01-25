@@ -119,9 +119,16 @@ class GridVisualizerWindow(QMainWindow):
 
     def _init_data_state(self) -> None:
         """Initialize data-related state variables."""
-        self.grid_data = np.zeros((GRID_ROWS, GRID_COLS), dtype=np.uint16)
-        self.selected_row = GRID_ROWS // 2
-        self.selected_col = GRID_COLS // 2
+        # Load hardware configuration first to get grid dimensions
+        self.hardware_config = get_default_config()
+
+        # Use config values as single source of truth, with fallback to constants
+        self.grid_rows = self.hardware_config.grid_rows if self.hardware_config else self.grid_rows
+        self.grid_cols = self.hardware_config.grid_cols if self.hardware_config else self.grid_cols
+
+        self.grid_data = np.zeros((self.grid_rows, self.grid_cols), dtype=np.uint16)
+        self.selected_row = self.grid_rows // 2
+        self.selected_col = self.grid_cols // 2
         self.waveform_history = deque(maxlen=WAVEFORM_HISTORY_SIZE)
         self.waveform_time = deque(maxlen=WAVEFORM_HISTORY_SIZE)
         self.frame_count = 0
@@ -135,7 +142,6 @@ class GridVisualizerWindow(QMainWindow):
         self.movement_tracker = MovementTracker()
         self.frequency_analyzer = FrequencyAnalyzer()
         self.calibration_dialog: Optional[CalibrationDialog] = None
-        self.hardware_config = get_default_config()
         self.setup_dialog = None
 
     def _init_recording_state(self) -> None:
@@ -400,7 +406,7 @@ class GridVisualizerWindow(QMainWindow):
 
         # Status
         self.calib_status = QLabel("Not calibrated yet")
-        self.calib_status.setFont(QFont("Comic Sans MS", 11))
+        self.calib_status.setFont(QFont("Comic Sans MS", 12))
         self.calib_status.setStyleSheet(
             f"color: {COLORS['warning']}; background: transparent; border: none;"
         )
@@ -439,9 +445,9 @@ class GridVisualizerWindow(QMainWindow):
         status_layout.addWidget(self.recording_dot)
 
         self.recording_status = QLabel("Ready to record")
-        self.recording_status.setFont(QFont("Comic Sans MS", 11))
+        self.recording_status.setFont(QFont("Comic Sans MS", 12))
         self.recording_status.setStyleSheet(
-            f"color: {COLORS['text_light']}; background: transparent; border: none;"
+            f"color: {COLORS['text_light']}; background: transparent; border: none; padding: 4px 0px;"
         )
         status_layout.addWidget(self.recording_status)
         status_layout.addStretch()
@@ -574,7 +580,7 @@ class GridVisualizerWindow(QMainWindow):
             self.status_bar.showMessage("Please select a port first!")
             return
 
-        self.serial_reader = SerialReader(port)
+        self.serial_reader = SerialReader(port, grid_rows=self.grid_rows, grid_cols=self.grid_cols)
         self.serial_reader.data_received.connect(self._on_data_received)
         self.serial_reader.error_occurred.connect(self._on_serial_error)
         self.serial_reader.start()
@@ -619,7 +625,7 @@ class GridVisualizerWindow(QMainWindow):
         spine_line = SpineLine(
             start_row=1,
             end_row=10,
-            coefficients=(0.0, GRID_COLS / 2)
+            coefficients=(0.0, self.grid_cols / 2)
         )
 
         self.spine_detector.calibration.spine_line = spine_line
@@ -639,13 +645,13 @@ class GridVisualizerWindow(QMainWindow):
         t = time.time()
 
         # Moving pressure point simulating palpation
-        spine_col = GRID_COLS / 2 + np.sin(t * 0.5) * 2
+        spine_col = self.grid_cols / 2 + np.sin(t * 0.5) * 2
         spine_row = 2 + ((t * 2) % 8)
 
         # Create pressure distribution
-        data = np.zeros((GRID_ROWS, GRID_COLS), dtype=np.uint16)
-        for i in range(GRID_ROWS):
-            for j in range(GRID_COLS):
+        data = np.zeros((self.grid_rows, self.grid_cols), dtype=np.uint16)
+        for i in range(self.grid_rows):
+            for j in range(self.grid_cols):
                 dist = np.sqrt((i - spine_row)**2 + (j - spine_col)**2)
                 data[i, j] = int(2500 * np.exp(-dist**2 / 4))
 
@@ -787,7 +793,7 @@ class GridVisualizerWindow(QMainWindow):
         col = int(mouse_point.x())
         row = int(mouse_point.y())
 
-        if 0 <= row < GRID_ROWS and 0 <= col < GRID_COLS:
+        if 0 <= row < self.grid_rows and 0 <= col < self.grid_cols:
             self.selected_row = row
             self.selected_col = col
             self.selected_label.setText(f"Watching: Row {row}, Col {col}")
@@ -872,8 +878,8 @@ class GridVisualizerWindow(QMainWindow):
     def _open_setup_mode(self) -> None:
         """Open the hardware setup dialog."""
         self.setup_dialog = SetupModeDialog(
-            grid_rows=GRID_ROWS,
-            grid_cols=GRID_COLS,
+            grid_rows=self.grid_rows,
+            grid_cols=self.grid_cols,
             initial_config=self.hardware_config,
             parent=self
         )
@@ -1018,7 +1024,7 @@ class GridVisualizerWindow(QMainWindow):
         """Export raw grid data to CSV."""
         with open(filepath, 'w', newline='') as f:
             writer = csv.writer(f)
-            header = ['frame'] + [f'r{r}c{c}' for r in range(GRID_ROWS) for c in range(GRID_COLS)]
+            header = ['frame'] + [f'r{r}c{c}' for r in range(self.grid_rows) for c in range(self.grid_cols)]
             writer.writerow(header)
             for i, frame in enumerate(self.recording_data_raw):
                 row = [i] + frame.flatten().tolist()

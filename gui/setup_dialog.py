@@ -54,6 +54,63 @@ COLORS = {
 }
 
 
+class GridPreviewWidget(QWidget):
+    """Visual preview of the grid dimensions."""
+
+    def __init__(self, rows=12, cols=20, parent=None):
+        super().__init__(parent)
+        self.rows = rows
+        self.cols = cols
+        self.setMinimumSize(120, 80)
+
+    def set_dimensions(self, rows: int, cols: int):
+        """Update grid dimensions."""
+        self.rows = rows
+        self.cols = cols
+        self.update()
+
+    def paintEvent(self, event):
+        """Draw the grid preview."""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        width = self.width()
+        height = self.height()
+
+        # Add padding
+        padding = 8
+        available_width = width - 2 * padding
+        available_height = height - 2 * padding
+
+        cell_width = available_width / self.cols
+        cell_height = available_height / self.rows
+
+        # Draw grid cells
+        for r in range(self.rows):
+            for c in range(self.cols):
+                x = padding + c * cell_width
+                y = padding + r * cell_height
+
+                # Alternate colors for visibility
+                if (r + c) % 2 == 0:
+                    color = QColor(COLORS['bg_quaternary'])
+                else:
+                    color = QColor(COLORS['separator'])
+
+                painter.fillRect(int(x), int(y), max(1, int(cell_width)), max(1, int(cell_height)), color)
+
+        # Draw border
+        painter.setPen(QPen(QColor(COLORS['accent_blue']), 2))
+        painter.drawRect(padding, padding, int(available_width), int(available_height))
+
+        # Draw dimensions text
+        painter.setPen(QPen(QColor(COLORS['text_secondary'])))
+        font = QFont("-apple-system", 9)
+        painter.setFont(font)
+        dim_text = f"{self.rows}×{self.cols}"
+        painter.drawText(padding, height - 2, dim_text)
+
+
 class AnimatedRowIndicator(QWidget):
     """Visual indicator showing which row to press with pulsing animation."""
 
@@ -293,8 +350,95 @@ class SetupModeDialog(QDialog):
             "Use the guided sequence or manually assign pins."
         )
         desc.setWordWrap(True)
-        desc.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 13px; margin-bottom: 8px;")
+        desc.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 14px; margin-bottom: 8px;")
         layout.addWidget(desc)
+
+        # Grid Size Configuration
+        size_group = QGroupBox("Grid Dimensions")
+        size_layout = QHBoxLayout(size_group)
+        size_layout.setSpacing(16)
+
+        # Grid dimensions display
+        grid_info = QVBoxLayout()
+        grid_label = QLabel("Configure the physical grid size")
+        grid_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 13px;")
+        grid_info.addWidget(grid_label)
+
+        dims_layout = QHBoxLayout()
+        dims_layout.setSpacing(12)
+
+        # Rows spinbox
+        rows_label = QLabel("Rows:")
+        rows_label.setStyleSheet(f"color: {COLORS['text_primary']}; font-size: 14px; font-weight: 500;")
+        dims_layout.addWidget(rows_label)
+
+        self.rows_spinbox = QSpinBox()
+        self.rows_spinbox.setRange(1, 50)
+        self.rows_spinbox.setValue(self.grid_rows)
+        self.rows_spinbox.setFixedWidth(80)
+        self.rows_spinbox.valueChanged.connect(self._on_grid_size_changed)
+        self.rows_spinbox.setStyleSheet(f"""
+            QSpinBox {{
+                background-color: {COLORS['bg_tertiary']};
+                border: none;
+                border-radius: 8px;
+                padding: 8px 12px;
+                color: {COLORS['text_primary']};
+                font-size: 16px;
+                font-weight: bold;
+            }}
+        """)
+        dims_layout.addWidget(self.rows_spinbox)
+
+        # Multiplication symbol
+        times_label = QLabel("×")
+        times_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 18px;")
+        dims_layout.addWidget(times_label)
+
+        # Columns spinbox
+        cols_label = QLabel("Columns:")
+        cols_label.setStyleSheet(f"color: {COLORS['text_primary']}; font-size: 14px; font-weight: 500;")
+        dims_layout.addWidget(cols_label)
+
+        self.cols_spinbox = QSpinBox()
+        self.cols_spinbox.setRange(1, 50)
+        self.cols_spinbox.setValue(self.grid_cols)
+        self.cols_spinbox.setFixedWidth(80)
+        self.cols_spinbox.valueChanged.connect(self._on_grid_size_changed)
+        self.cols_spinbox.setStyleSheet(f"""
+            QSpinBox {{
+                background-color: {COLORS['bg_tertiary']};
+                border: none;
+                border-radius: 8px;
+                padding: 8px 12px;
+                color: {COLORS['text_primary']};
+                font-size: 16px;
+                font-weight: bold;
+            }}
+        """)
+        dims_layout.addWidget(self.cols_spinbox)
+
+        # Total sensors display
+        dims_layout.addStretch()
+        self.total_sensors_label = QLabel(f"Total: {self.grid_rows * self.grid_cols} sensors")
+        self.total_sensors_label.setStyleSheet(f"color: {COLORS['accent_blue']}; font-size: 14px; font-weight: 600;")
+        dims_layout.addWidget(self.total_sensors_label)
+
+        grid_info.addLayout(dims_layout)
+        size_layout.addLayout(grid_info)
+
+        # Visual grid preview
+        preview_container = QVBoxLayout()
+        preview_label = QLabel("Grid Preview")
+        preview_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 11px; text-transform: uppercase;")
+        preview_container.addWidget(preview_label)
+
+        self.grid_preview = GridPreviewWidget(self.grid_rows, self.grid_cols)
+        self.grid_preview.setStyleSheet(f"background-color: {COLORS['bg_tertiary']}; border-radius: 8px;")
+        preview_container.addWidget(self.grid_preview)
+        size_layout.addLayout(preview_container)
+
+        layout.addWidget(size_group)
 
         # Main content
         main_layout = QHBoxLayout()
@@ -678,3 +822,29 @@ class SetupModeDialog(QDialog):
                 QMessageBox.information(self, "Exported", f"C header exported to:\n{filepath}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to export:\n{e}")
+
+    def _on_grid_size_changed(self):
+        """Handle grid size change."""
+        new_rows = self.rows_spinbox.value()
+        new_cols = self.cols_spinbox.value()
+
+        # Update config
+        self.grid_rows = new_rows
+        self.grid_cols = new_cols
+        self.config.grid_rows = new_rows
+        self.config.grid_cols = new_cols
+
+        # Update total sensors label
+        total = new_rows * new_cols
+        self.total_sensors_label.setText(f"Total: {total} sensors")
+
+        # Update row indicator
+        self.row_indicator.total_rows = new_rows
+        self.row_indicator.set_row(self.row_indicator.current_row, new_rows)
+
+        # Rebuild table with new row count
+        self.config_table.setRowCount(new_rows)
+        self._update_table()
+
+        # Update grid preview
+        self.grid_preview.set_dimensions(new_rows, new_cols)

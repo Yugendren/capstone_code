@@ -8,7 +8,7 @@
  * @attention
  *
  * Driver for Texas Instruments ADS1220 24-bit, 4-channel Delta-Sigma ADC.
- * Used for reading columns in the 16x32 piezoelectric force sensing grid.
+ * Used for reading columns in the 12x20 piezoelectric force sensing grid.
  *
  ******************************************************************************
  *
@@ -44,9 +44,9 @@ extern "C" {
  * @defgroup ADS1220_COUNT Number of ADS1220 chips
  * @{
  */
-#define ADS1220_NUM_CHIPS       8U      /**< 8 ADS1220 chips for 32 columns */
+#define ADS1220_NUM_CHIPS       5U      /**< 5 ADS1220 chips for 20 columns */
 #define ADS1220_CHANNELS        4U      /**< 4 single-ended channels per chip */
-#define ADS1220_TOTAL_CHANNELS  (ADS1220_NUM_CHIPS * ADS1220_CHANNELS)  /**< 32 */
+#define ADS1220_TOTAL_CHANNELS  (ADS1220_NUM_CHIPS * ADS1220_CHANNELS)  /**< 20 */
 /** @} */
 
 /**
@@ -154,26 +154,26 @@ void ADS1220_Init(SPI_HandleTypeDef *hspi);
 
 /**
  * @brief  Reset a specific ADS1220 chip
- * @param  chipIndex: Chip index (0-7)
+ * @param  chipIndex: Chip index (0-4)
  * @retval None
  */
 void ADS1220_Reset(uint8_t chipIndex);
 
 /**
  * @brief  Configure a specific ADS1220 chip
- * @param  chipIndex: Chip index (0-7)
+ * @param  chipIndex: Chip index (0-4)
  * @param  reg0: Register 0 value
  * @param  reg1: Register 1 value
  * @param  reg2: Register 2 value
  * @param  reg3: Register 3 value
  * @retval None
  */
-void ADS1220_Configure(uint8_t chipIndex, uint8_t reg0, uint8_t reg1, 
+void ADS1220_Configure(uint8_t chipIndex, uint8_t reg0, uint8_t reg1,
                        uint8_t reg2, uint8_t reg3);
 
 /**
  * @brief  Set input channel on a specific ADS1220
- * @param  chipIndex: Chip index (0-7)
+ * @param  chipIndex: Chip index (0-4)
  * @param  channel: Channel (0-3)
  * @retval None
  */
@@ -181,22 +181,22 @@ void ADS1220_SetChannel(uint8_t chipIndex, uint8_t channel);
 
 /**
  * @brief  Start conversion and read result from one ADS1220
- * @param  chipIndex: Chip index (0-7)
+ * @param  chipIndex: Chip index (0-4)
  * @retval 24-bit ADC value (right-justified in uint32_t)
  */
 uint32_t ADS1220_ReadData(uint8_t chipIndex);
 
 /**
  * @brief  Read a specific channel from a specific chip (convenience)
- * @param  chipIndex: Chip index (0-7)
+ * @param  chipIndex: Chip index (0-4)
  * @param  channel: Channel (0-3)
  * @retval 24-bit ADC value
  */
 uint32_t ADS1220_ReadChannel(uint8_t chipIndex, uint8_t channel);
 
 /**
- * @brief  Read all 32 columns (all chips, all channels)
- * @param  values: Array of 32 uint32_t to store results
+ * @brief  Read all 20 columns (all chips, all channels)
+ * @param  values: Array of 20 uint32_t to store results
  * @retval None
  */
 void ADS1220_ReadAllColumns(uint32_t values[ADS1220_TOTAL_CHANNELS]);

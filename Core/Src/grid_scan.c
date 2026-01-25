@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
  * @file           : grid_scan.c
- * @brief          : 16x32 Grid Scanning Engine (ADS1220 Version)
+ * @brief          : 12x20 Grid Scanning Engine (ADS1220 Version)
  * @author         : Capstone Project
  * @date           : 2026-01-13
  ******************************************************************************
@@ -111,21 +111,21 @@ void GRID_Calibrate(void)
 }
 
 /**
- * @brief  Scan the entire 16x32 grid
+ * @brief  Scan the entire 12x20 grid
  */
 void GRID_ScanMatrix(void)
 {
     g_GridData.state = GRID_STATE_SCANNING;
-    
+
     for (uint8_t row = 0; row < GRID_NUM_ROWS; row++) {
         /* Enable this row (drive 3.3V through velostat) */
         GRID_EnableRow(row);
-        
+
         /* Small delay for voltage to stabilize */
         /* Note: Could be reduced with testing */
         for (volatile int i = 0; i < 100; i++);
-        
-        /* Read all 32 columns via ADS1220s */
+
+        /* Read all 20 columns via ADS1220s */
         uint32_t colValues[GRID_NUM_COLS];
         ADS1220_ReadAllColumns(colValues);
         
@@ -165,18 +165,18 @@ void GRID_ScanMatrix(void)
 void GRID_TransmitData(void)
 {
     g_GridData.state = GRID_STATE_TRANSMITTING;
-    
+
     uint16_t checksum = 0;
     uint16_t idx = PACKET_HEADER_SIZE;
-    
-    /* Pack 512 x 16-bit values */
+
+    /* Pack 240 x 16-bit values (12 rows × 20 cols) */
     for (uint8_t row = 0; row < GRID_NUM_ROWS; row++) {
         for (uint8_t col = 0; col < GRID_NUM_COLS; col++) {
             uint16_t val = g_GridData.data[row][col];
-            
+
             s_TxBuffer[idx++] = (uint8_t)(val & 0xFF);
             s_TxBuffer[idx++] = (uint8_t)(val >> 8);
-            
+
             checksum += (val & 0xFF);
             checksum += (val >> 8);
         }

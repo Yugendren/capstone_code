@@ -67,19 +67,30 @@ class SerialReader(QThread):
     data_received = pyqtSignal(np.ndarray)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, port: str, baudrate: int = 115200):
+    def __init__(self, port: str, baudrate: int = 115200, grid_rows: int = None, grid_cols: int = None):
         """
         Initialize the serial reader.
 
         Args:
             port: Serial port path (e.g., '/dev/ttyUSB0', 'COM3')
             baudrate: Communication speed (default 115200)
+            grid_rows: Number of rows in grid (uses config default if None)
+            grid_cols: Number of columns in grid (uses config default if None)
         """
         super().__init__()
         self.port = port
         self.baudrate = baudrate
         self.running = False
         self.serial: Optional[serial.Serial] = None
+
+        # Use provided grid dimensions or fall back to constants
+        self.grid_rows = grid_rows if grid_rows is not None else GRID_ROWS
+        self.grid_cols = grid_cols if grid_cols is not None else GRID_COLS
+        self.grid_total = self.grid_rows * self.grid_cols
+
+        # Calculate packet sizes based on grid dimensions
+        self.payload_size = self.grid_total * 2  # 2 bytes per cell (16-bit values)
+        self.packet_size = HEADER_SIZE + self.payload_size + 4  # header + payload + footer
 
     def run(self) -> None:
         """
@@ -120,7 +131,7 @@ class SerialReader(QThread):
                 buffer.extend(self.serial.read(self.serial.in_waiting))
 
             # Process complete packets
-            while len(buffer) >= PACKET_SIZE:
+            while len(buffer) >= self.packet_size:
                 packet = self._extract_packet(buffer)
                 if packet is None:
                     break  # Need more data
@@ -157,10 +168,10 @@ class SerialReader(QThread):
             # Discard bytes before sync
             del buffer[:sync_idx]
 
-        if len(buffer) < PACKET_SIZE:
+        if len(buffer) < self.packet_size:
             return None  # Incomplete packet
 
-        return buffer[:PACKET_SIZE]
+        return buffer[:self.packet_size]
 
     def _find_sync(self, buffer: bytearray) -> int:
         """
@@ -188,11 +199,11 @@ class SerialReader(QThread):
             Grid data as numpy array, or None if invalid
         """
         # Extract payload
-        payload = packet[HEADER_SIZE:HEADER_SIZE + PAYLOAD_SIZE]
+        payload = packet[HEADER_SIZE:HEADER_SIZE + self.payload_size]
 
         # Validate checksum
         expected_checksum = struct.unpack('<H',
-            packet[HEADER_SIZE + PAYLOAD_SIZE:HEADER_SIZE + PAYLOAD_SIZE + 2]
+            packet[HEADER_SIZE + self.payload_size:HEADER_SIZE + self.payload_size + 2]
         )[0]
         actual_checksum = sum(payload) & 0xFFFF
 
@@ -200,10 +211,10 @@ class SerialReader(QThread):
             return None  # Corrupted packet
 
         # Unpack sensor values (little-endian 16-bit unsigned)
-        values = struct.unpack(f'<{GRID_TOTAL}H', payload)
+        values = struct.unpack(f'<{self.grid_total}H', payload)
 
         # Reshape to grid
-        grid_data = np.array(values, dtype=np.uint16).reshape(GRID_ROWS, GRID_COLS)
+        grid_data = np.array(values, dtype=np.uint16).reshape(self.grid_rows, self.grid_cols)
         return grid_data
 
     def stop(self) -> None:
