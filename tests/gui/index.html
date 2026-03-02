@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>6x6 Pressure Matrix</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 0.5rem;
+  }
+  h1 {
+    font-size: 1.4rem;
+    color: #aaa;
+    letter-spacing: 2px;
+  }
+  #stats {
+    font-size: 0.85rem;
+    color: #888;
+  }
+  #controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #888;
+  }
+  button {
+    background: #2a2a4a;
+    color: #ccc;
+    border: 1px solid #555;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  button:hover { background: #3a3a5a; color: #fff; }
+  button.active { background: #4a2a2a; border-color: #f66; color: #f99; }
+  #noise-slider { width: 120px; accent-color: #f66; }
+  #mode-toggle { display: flex; gap: 0.5rem; }
+  #grid-container {
+    display: grid;
+    grid-template-columns: 36px repeat(6, 1fr);
+    grid-template-rows: 28px repeat(6, 1fr);
+    gap: 3px;
+    width: min(90vw, 540px);
+    height: min(75vh, 460px);
+  }
+  .col-label, .row-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: #555;
+    font-weight: bold;
+  }
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: background-color 0.06s ease;
+    border: 1px solid #333;
+  }
+  #calibrating-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #ff9;
+    z-index: 10;
+    display: none;
+  }
+  #status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+  }
+  .connected { background: #0f0; }
+  .disconnected { background: #f00; }
+</style>
+</head>
+<body>
+
+<h1>PRESSURE MATRIX 6x6</h1>
+<div id="stats">
+  <span id="status-dot" class="disconnected"></span>
+  <span id="status-text">Connecting...</span>
+  &nbsp;|&nbsp; Scan: <span id="hz">--</span> Hz
+  &nbsp;|&nbsp; Active: <span id="pressed">0</span>/36
+</div>
+
+<div id="controls">
+  <div id="mode-toggle">
+    <button id="btn-filtered" class="active" onclick="setMode('filtered')">Filtered</button>
+    <button id="btn-raw" onclick="setMode('raw')">Raw</button>
+  </div>
+  <button onclick="calibrate()">Calibrate</button>
+  <label>
+    Noise floor: <span id="nf-val">200</span>
+    <input type="range" id="noise-slider" min="0" max="1000" value="200" step="25"
+           oninput="setNoiseFloor(this.value)">
+  </label>
+</div>
+
+<div id="grid-container">
+  <div class="corner"></div>
+  <div class="col-label">C0</div>
+  <div class="col-label">C1</div>
+  <div class="col-label">C2</div>
+  <div class="col-label">C3</div>
+  <div class="col-label">C4</div>
+  <div class="col-label">C5</div>
+</div>
+
+<div id="calibrating-overlay">Calibrating baseline...</div>
+
+<script>
+const ROWS = 6, COLS = 6, MAX_VAL = 3500;
+const container = document.getElementById('grid-container');
+const overlay = document.getElementById('calibrating-overlay');
+const cells = [];
+let ws = null;
+let mode = 'filtered';  // 'filtered' or 'raw'
+
+for (let r = 0; r < ROWS; r++) {
+  const rl = document.createElement('div');
+  rl.className = 'row-label';
+  rl.textContent = 'R' + r;
+  container.appendChild(rl);
+  cells[r] = [];
+  for (let c = 0; c < COLS; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.textContent = '0';
+    container.appendChild(cell);
+    cells[r][c] = cell;
+  }
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-filtered').className = m === 'filtered' ? 'active' : '';
+  document.getElementById('btn-raw').className = m === 'raw' ? 'active' : '';
+}
+
+function calibrate() {
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({action: 'calibrate'}));
+  }
+}
+
+function setNoiseFloor(val) {
+  document.getElementById('nf-val').textContent = val;
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({action: 'set_noise_floor', value: parseInt(val)}));
+  }
+}
+
+function updateGrid(data) {
+  const grid = mode === 'raw' ? data.raw : data.grid;
+  const maxV = mode === 'raw' ? 4095 : MAX_VAL;
+
+  overlay.style.display = data.calibrating ? 'flex' : 'none';
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const val = grid[r][c];
+      const ratio = Math.min(Math.max(val / maxV, 0), 1.0);
+
+      // White -> Black as pressure increases
+      const b = Math.round(255 * (1 - ratio));
+      cells[r][c].style.backgroundColor = `rgb(${b},${b},${b})`;
+
+      // Red text, brighter on dark backgrounds
+      cells[r][c].style.color = b < 128 ? '#ff6666' : '#cc0000';
+      cells[r][c].textContent = val;
+    }
+  }
+  document.getElementById('hz').textContent = data.hz.toFixed(1);
+  document.getElementById('pressed').textContent = data.pressed;
+}
+
+function connect() {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  ws = new WebSocket('ws://localhost:8765');
+  ws.onopen = () => { dot.className = 'connected'; txt.textContent = 'Connected'; };
+  ws.onmessage = (e) => updateGrid(JSON.parse(e.data));
+  ws.onclose = () => { dot.className = 'disconnected'; txt.textContent = 'Reconnecting...'; setTimeout(connect, 1000); };
+  ws.onerror = () => ws.close();
+}
+
+connect();
+</script>
+</body>
+</html>

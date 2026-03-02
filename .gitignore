@@ -1,0 +1,6 @@
+bin/
+.claude/settings.local.json
+build/
+*.o
+*.elf
+*.bin
