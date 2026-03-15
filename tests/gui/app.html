@@ -338,6 +338,21 @@
   .setting-row label { font-size: 13px; color: var(--text-dim); margin-bottom: 0; }
   .settings-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
 
+  /* Flash firmware modal */
+  #flash-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center; z-index: 200;
+  }
+  .flash-bar-track {
+    background: var(--bg-input); border-radius: 4px; height: 24px;
+    margin: 12px 0; overflow: hidden;
+  }
+  .flash-bar-fill {
+    background: var(--accent); height: 100%; width: 0%;
+    transition: width 0.3s;
+  }
+
   /* Nearest vertebra */
   .nearest-label {
     font-size: 13px; color: var(--text-dim); padding: 2px 8px;
@@ -370,6 +385,11 @@
     </div>
     <button class="btn btn-primary connect-btn" id="connect-btn" onclick="doConnect()">Connect</button>
     <div class="conn-status" id="conn-status"></div>
+    <div style="text-align:center;margin-top:4px">
+      <a href="#" onclick="openFlashModal();return false" style="color:var(--text-dim);font-size:12px;text-decoration:none">
+        Flash Firmware to Device
+      </a>
+    </div>
   </div>
 </div>
 
@@ -594,9 +614,46 @@
       </div>
     </div>
 
+    <div class="setting-group">
+      <label>Firmware</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-sm" onclick="closeSettings();openFlashModal()">Flash Firmware to Device</button>
+      </div>
+    </div>
+
     <div class="settings-actions">
       <button class="btn btn-primary" onclick="saveSettingsUI()">Save</button>
       <button class="btn" onclick="closeSettings()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="flash-modal">
+  <div class="settings-panel" style="max-width:450px">
+    <h3>Flash Firmware</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px">
+      Flash the PressureMat firmware onto a connected ESP32-S3.<br>
+      The serial connection will be closed during flashing.
+    </p>
+    <div class="setting-group">
+      <label>Serial Port</label>
+      <div class="port-row">
+        <select id="flash-port-select"><option value="">Scanning...</option></select>
+        <button class="btn btn-sm" onclick="refreshFlashPorts()">Refresh</button>
+      </div>
+    </div>
+    <div id="flash-progress-section" style="display:none">
+      <div class="flash-bar-track">
+        <div class="flash-bar-fill" id="flash-bar"></div>
+      </div>
+      <div id="flash-status" style="font-size:13px;text-align:center;color:var(--text-dim)"></div>
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;font-style:italic">
+      If flash fails, hold the BOOT button on the ESP32 and try again.
+    </p>
+    <div class="settings-actions">
+      <button class="btn btn-primary" id="flash-btn" onclick="doFlash()">Flash</button>
+      <button class="btn" id="flash-close-btn" onclick="closeFlashModal()">Close</button>
     </div>
   </div>
 </div>
@@ -1876,6 +1933,84 @@ canvas.addEventListener('mousemove', (e) => {
   }
 });
 canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+// ═══════════════════════════════════════════════════════════
+// Firmware Flash
+// ═══════════════════════════════════════════════════════════
+
+async function openFlashModal() {
+  document.getElementById('flash-modal').style.display = 'flex';
+  document.getElementById('flash-progress-section').style.display = 'none';
+  document.getElementById('flash-btn').disabled = false;
+  document.getElementById('flash-bar').style.width = '0%';
+  document.getElementById('flash-bar').style.background = 'var(--accent)';
+  refreshFlashPorts();
+}
+
+function closeFlashModal() {
+  document.getElementById('flash-modal').style.display = 'none';
+}
+
+async function refreshFlashPorts() {
+  const sel = document.getElementById('flash-port-select');
+  sel.innerHTML = '<option value="">Scanning...</option>';
+  try {
+    const ports = await pywebview.api.get_serial_ports();
+    sel.innerHTML = '';
+    if (!ports || ports.length === 0) {
+      sel.innerHTML = '<option value="">No ports found</option>';
+      return;
+    }
+    for (const p of ports) {
+      const opt = document.createElement('option');
+      opt.value = p.port;
+      opt.textContent = `${p.port} — ${p.description}`;
+      if (p.is_esp32) { opt.style.color = 'var(--accent)'; opt.textContent += ' [ESP32]'; }
+      sel.appendChild(opt);
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="">Error scanning</option>';
+  }
+}
+
+let flashPollTimer = null;
+
+async function doFlash() {
+  const port = document.getElementById('flash-port-select').value;
+  if (!port) return;
+
+  document.getElementById('flash-btn').disabled = true;
+  document.getElementById('flash-progress-section').style.display = 'block';
+  document.getElementById('flash-status').textContent = 'Starting...';
+  document.getElementById('flash-bar').style.width = '0%';
+  document.getElementById('flash-bar').style.background = 'var(--accent)';
+
+  const result = await pywebview.api.start_flash(port);
+  if (!result.success) {
+    document.getElementById('flash-status').textContent = result.message;
+    document.getElementById('flash-btn').disabled = false;
+    return;
+  }
+
+  flashPollTimer = setInterval(async () => {
+    try {
+      const prog = await pywebview.api.get_flash_progress();
+      document.getElementById('flash-bar').style.width = prog.percent + '%';
+      document.getElementById('flash-status').textContent = prog.message;
+
+      if (prog.status === 'done' || prog.status === 'error') {
+        clearInterval(flashPollTimer);
+        flashPollTimer = null;
+        document.getElementById('flash-btn').disabled = false;
+        if (prog.status === 'done') {
+          document.getElementById('flash-bar').style.background = 'var(--success)';
+        } else {
+          document.getElementById('flash-bar').style.background = 'var(--danger)';
+        }
+      }
+    } catch(e) {}
+  }, 500);
+}
 
 // ═══════════════════════════════════════════════════════════
 // Force Calibration Wizard

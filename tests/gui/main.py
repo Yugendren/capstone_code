@@ -13,8 +13,13 @@ import webview
 
 from backend import PressureBackend
 
-# Logging
-log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pressuremat.log")
+# Logging — use %APPDATA%/PressureMat when frozen, else script dir
+if getattr(sys, "frozen", False):
+    _log_dir = os.path.join(os.environ.get("APPDATA", os.path.dirname(sys.executable)), "PressureMat")
+    os.makedirs(_log_dir, exist_ok=True)
+    log_path = os.path.join(_log_dir, "pressuremat.log")
+else:
+    log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pressuremat.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -62,6 +67,9 @@ class ApiHandler:
         os.makedirs(folder, exist_ok=True)
         if sys.platform == "win32":
             os.startfile(folder)
+        else:
+            import subprocess
+            subprocess.Popen(["xdg-open", folder])
 
     def calibrate_baseline(self):
         with backend.lock:
@@ -105,6 +113,16 @@ class ApiHandler:
 
     def load_force_calibration_data(self):
         return backend.get_force_calibration_data()
+
+    # Firmware flash
+    def get_firmware_info(self):
+        return backend.get_firmware_info()
+
+    def start_flash(self, port):
+        return backend.start_flash(port)
+
+    def get_flash_progress(self):
+        return backend.get_flash_progress()
 
     def get_settings(self):
         return backend.load_settings()
@@ -155,7 +173,9 @@ def main():
 
     window.events.closed += on_closed
 
-    webview.start()
+    # Use Edge WebView2 on Windows (modern rendering), fallback to default elsewhere
+    gui = "edgechromium" if sys.platform == "win32" else None
+    webview.start(gui=gui)
 
 
 if __name__ == "__main__":

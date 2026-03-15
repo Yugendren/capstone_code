@@ -6,6 +6,8 @@ import json
 import logging
 import os
 import struct
+import subprocess
+import sys
 import threading
 import time
 from datetime import datetime
@@ -69,12 +71,28 @@ class PressureBackend:
         self._ws_clients = set()
         self._loop = None
 
-        # Paths
-        self._base_dir = os.path.dirname(os.path.abspath(__file__))
-        self._recordings_dir = os.path.join(self._base_dir, "recordings")
-        self._cal_path = os.path.join(self._base_dir, "spine_calibration.json")
-        self._force_cal_path = os.path.join(self._base_dir, "force_calibration.json")
-        self._settings_path = os.path.join(self._base_dir, "settings.json")
+        # Paths — split resource (read-only, bundled) vs data (writable, persistent)
+        if getattr(sys, "frozen", False):
+            self._resource_dir = sys._MEIPASS
+            self._data_dir = os.path.join(
+                os.environ.get("APPDATA", os.path.dirname(sys.executable)),
+                "PressureMat",
+            )
+        else:
+            self._resource_dir = os.path.dirname(os.path.abspath(__file__))
+            self._data_dir = self._resource_dir
+
+        os.makedirs(self._data_dir, exist_ok=True)
+
+        self._recordings_dir = os.path.join(self._data_dir, "recordings")
+        self._cal_path = os.path.join(self._data_dir, "spine_calibration.json")
+        self._force_cal_path = os.path.join(self._data_dir, "force_calibration.json")
+        self._settings_path = os.path.join(self._data_dir, "settings.json")
+        self._firmware_dir = os.path.join(self._resource_dir, "firmware")
+
+        # Firmware flash state
+        self._flash_progress = {"status": "idle", "message": "", "percent": 0}
+        self._flash_thread = None
 
         # Load saved calibrations
         self.load_spine_calibration()
@@ -608,6 +626,122 @@ class PressureBackend:
             except Exception:
                 pass
         return None
+
+    # ── Firmware Flash ────────────────────────────────────────────
+
+    def get_firmware_info(self):
+        """Return firmware file availability."""
+        app_bin = os.path.join(self._firmware_dir, "t13_optimized.ino.bin")
+        esptool = os.path.join(self._firmware_dir, "esptool.exe")
+        return {
+            "firmware_available": os.path.isfile(app_bin),
+            "esptool_available": os.path.isfile(esptool),
+        }
+
+    def get_flash_progress(self):
+        """Return current flash operation status."""
+        return dict(self._flash_progress)
+
+    def start_flash(self, port):
+        """Flash firmware to ESP32-S3. Runs in background thread."""
+        if self._flash_thread and self._flash_thread.is_alive():
+            return {"success": False, "message": "Flash already in progress"}
+
+        # Disconnect serial if we're connected to this port
+        if self.connected and self.port_name == port:
+            self.disconnect()
+
+        self._flash_progress = {"status": "starting", "message": "Starting flash...", "percent": 0}
+        self._flash_thread = threading.Thread(target=self._do_flash, args=(port,), daemon=True)
+        self._flash_thread.start()
+        return {"success": True, "message": "Flash started"}
+
+    def _do_flash(self, port):
+        """Execute esptool in a subprocess. Runs in background thread."""
+        esptool = os.path.join(self._firmware_dir, "esptool.exe")
+        bootloader = os.path.join(self._firmware_dir, "t13_optimized.ino.bootloader.bin")
+        partitions = os.path.join(self._firmware_dir, "t13_optimized.ino.partitions.bin")
+        boot_app0 = os.path.join(self._firmware_dir, "boot_app0.bin")
+        app_bin = os.path.join(self._firmware_dir, "t13_optimized.ino.bin")
+
+        # Verify all files exist
+        for path in [esptool, bootloader, partitions, boot_app0, app_bin]:
+            if not os.path.isfile(path):
+                self._flash_progress = {
+                    "status": "error",
+                    "message": f"Missing: {os.path.basename(path)}",
+                    "percent": 0,
+                }
+                return
+
+        cmd = [
+            esptool,
+            "--chip", "esp32s3",
+            "--port", port,
+            "--baud", "921600",
+            "--before", "default_reset",
+            "--after", "hard_reset",
+            "write_flash", "-z",
+            "--flash-mode", "dio",
+            "--flash-freq", "80m",
+            "--flash-size", "16MB",
+            "0x0", bootloader,
+            "0x8000", partitions,
+            "0xe000", boot_app0,
+            "0x10000", app_bin,
+        ]
+
+        try:
+            self._flash_progress = {"status": "flashing", "message": "Erasing flash...", "percent": 5}
+            kwargs = {}
+            if sys.platform == "win32":
+                kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, **kwargs,
+            )
+            for line in proc.stdout:
+                line = line.strip()
+                log.info("esptool: %s", line)
+                if "Writing at" in line and "%" in line:
+                    try:
+                        pct = int(line.split("(")[1].split("%")[0])
+                        self._flash_progress = {
+                            "status": "flashing",
+                            "message": f"Writing... {pct}%",
+                            "percent": 5 + int(pct * 0.90),
+                        }
+                    except (IndexError, ValueError):
+                        pass
+                elif "Hash of data verified" in line:
+                    self._flash_progress = {"status": "flashing", "message": "Verifying...", "percent": 96}
+                elif "Hard resetting" in line or "Leaving" in line:
+                    self._flash_progress = {"status": "flashing", "message": "Resetting device...", "percent": 98}
+
+            proc.wait()
+            if proc.returncode == 0:
+                self._flash_progress = {
+                    "status": "done",
+                    "message": "Flash complete! Device is restarting.",
+                    "percent": 100,
+                }
+                log.info("Firmware flash succeeded on %s", port)
+            else:
+                self._flash_progress = {
+                    "status": "error",
+                    "message": f"Flash failed (exit code {proc.returncode})",
+                    "percent": 0,
+                }
+                log.error("Firmware flash failed on %s (exit %d)", port, proc.returncode)
+        except FileNotFoundError:
+            self._flash_progress = {
+                "status": "error",
+                "message": "esptool.exe not found",
+                "percent": 0,
+            }
+        except Exception as e:
+            self._flash_progress = {"status": "error", "message": str(e), "percent": 0}
+            log.error("Flash error: %s", e)
 
     # ── Settings ────────────────────────────────────────────────────
 

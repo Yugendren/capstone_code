@@ -167,9 +167,9 @@ but adds significant complexity. Not implemented.
 - Total frame: 2408 bytes
 - Toggle: send 'b' (binary) or 'a' (ASCII) over serial
 
-## REAL-TIME GUI
+## DESKTOP GUI (pywebview)
 
-Web-based visualization: Python WebSocket server + HTML5 Canvas.
+Native desktop application using pywebview (Edge WebView2) + internal WebSocket.
 
 **Features:**
 - Transposed display matching physical mat orientation
@@ -180,21 +180,42 @@ Web-based visualization: Python WebSocket server + HTML5 Canvas.
 - Baseline calibration (averages first 10 scans)
 - Adjustable noise floor (default 200, slider 0-1000)
 - Hover tooltip with R/C coordinates and values
-- Auto-reconnecting WebSocket
-- Robust binary parser with footer validation (handles boot text)
+- Session recording with countdown (raw + filtered + force CSVs)
+- Spine calibration: drag-scan with clustering-based auto-detection (L1–L5)
+- Force calibration: 5-point IDW gain map (ADC → Newtons per cell)
+- Firmware flashing from GUI (esptool.exe, progress bar)
+- Settings persistence (JSON)
+- Exercise-specific region alerts with audio
 
 **Files:**
-- `tests/gui/server.py` — Python server (serial + WebSocket + HTTP)
-- `tests/gui/index.html` — Browser frontend (Canvas)
+- `tests/gui/main.py` — pywebview entry point + ApiHandler bridge
+- `tests/gui/backend.py` — Serial, grid processing, sessions, calibration, WebSocket, firmware flash
+- `tests/gui/app.html` — Single-file SPA frontend (HTML/CSS/JS)
+- `tests/gui/assets/` — Icon, logo, splash screen
+- `tests/gui/firmware/` — Pre-compiled .bin files + esptool.exe (for flashing)
 
-**Environment variables for server.py:**
-- `SERIAL_PORT` (default: /dev/ttyACM0)
-- `BAUD_RATE` (default: 115200)
-- `ROWS` (default: 40)
-- `COLS` (default: 30)
-- `SERIAL_MODE` — set to `binary` for t13, `ascii` for t12 (default: ascii)
+**Build pipeline (Windows):**
+- `tests/gui/build.bat` — PyInstaller `--onedir` build
+- `tests/gui/pressuremat.spec` — PyInstaller spec file
+- `tests/gui/installer.iss` — Inno Setup script → `PressureMatSetup.exe`
+- User data saves to `%APPDATA%\PressureMat\` when frozen
 
-## QUICK START
+**Legacy GUI (browser-based):**
+- `tests/gui/server.py` — Standalone Python server (serial + WebSocket + HTTP)
+- `tests/gui/index.html` — Browser frontend
+- Launch: `SERIAL_MODE=binary python3 -u tests/gui/server.py` → http://localhost:8080
+
+## QUICK START — Desktop App (Windows)
+
+```
+1. Run PressureMatSetup.exe (or run from source: python tests/gui/main.py)
+2. Plug ESP32 into USB — COM port appears automatically
+3. If first time: click "Flash Firmware" on connection screen → select port → Flash
+4. Select COM port → Connect
+5. Heatmap displays live pressure data
+```
+
+## QUICK START — Development (WSL)
 
 ```bash
 # 1. Attach ESP32 to WSL (from Windows PowerShell as admin):
@@ -211,13 +232,24 @@ export FQBN="esp32:esp32:esp32s3:PSRAM=opi,FlashSize=16M,PartitionScheme=app3M_f
 arduino-cli compile --fqbn "$FQBN" tests/t13_optimized
 arduino-cli upload  --fqbn "$FQBN" -p /dev/ttyACM0 tests/t13_optimized
 
-# 4. Launch GUI (40×30 binary mode for t13):
+# 4. Launch desktop GUI:
+cd tests/gui && python3 main.py
+
+# 5. Or launch legacy browser GUI:
 SERIAL_MODE=binary python3 -u tests/gui/server.py
 # Open http://localhost:8080 in browser
+```
 
-# 5. If stuck on "Calibrating baseline", reset ESP32 first:
-python3 -c "import serial,time; s=serial.Serial('/dev/ttyACM0',115200,dsrdtr=True); s.dtr=False; time.sleep(0.1); s.dtr=True; time.sleep(4); s.read(s.in_waiting); s.close()"
-# Then restart server
+## BUILDING THE INSTALLER (Windows)
+
+```
+1. Install Python 3.10+ on Windows
+2. cd tests\gui
+3. pip install pyserial websockets pywebview
+4. Download esptool.exe from GitHub releases → place in firmware\
+5. build.bat                          → produces dist\PressureMat\
+6. (Optional) Download webview2setup.exe → place next to installer.iss
+7. Open installer.iss with Inno Setup → compile → PressureMatSetup.exe
 ```
 
 ## WORKING ENVIRONMENT
@@ -228,7 +260,10 @@ python3 -c "import serial,time; s=serial.Serial('/dev/ttyACM0',115200,dsrdtr=Tru
 - ESP32 core: v3.3.7
 - **CDCOnBoot=cdc is REQUIRED** — without it, Serial output goes to UART port (CH343) instead of native USB
 - Serial port: `/dev/ttyACM0` (native USB, requires `sudo modprobe cdc_acm` once per WSL boot)
-- Python dependencies: `pyserial`, `websockets`
+- Python dependencies: `pyserial`, `websockets`, `pywebview`
+- Desktop app GUI backend: Edge WebView2 (Windows), GTK/Qt (Linux)
+- Firmware flash tool: esptool.exe (standalone, bundled in `tests/gui/firmware/`)
+- Build tools: PyInstaller (EXE), Inno Setup (installer)
 
 ## KNOWN ISSUES
 

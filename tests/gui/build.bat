@@ -1,12 +1,17 @@
 @echo off
 echo === PressureMat Build ===
-pip install pyinstaller
-pyinstaller --onefile --noconsole ^
-    --name PressureMat ^
-    --icon assets\icon.ico ^
-    --add-data "app.html;." ^
-    --add-data "assets;assets" ^
-    main.py
 echo.
-echo Build complete: dist\PressureMat.exe
+
+echo [1/3] Installing dependencies...
+pip install pyinstaller pyserial websockets pywebview
+
+echo.
+echo [2/3] Building with PyInstaller (onedir)...
+pyinstaller --clean --noconfirm pressuremat.spec
+
+echo.
+echo [3/3] Build complete!
+echo   Output: dist\PressureMat\PressureMat.exe
+echo.
+echo To create installer, open installer.iss with Inno Setup Compiler.
 pause

@@ -4,3 +4,4 @@ build/
 *.o
 *.elf
 *.bin
+!tests/gui/firmware/*.bin
