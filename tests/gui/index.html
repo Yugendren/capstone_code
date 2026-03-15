@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>6x6 Pressure Matrix</title>
+<title>Pressure Matrix</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -12,76 +12,60 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     min-height: 100vh;
-    gap: 0.5rem;
+    padding: 0.5rem;
+    gap: 0.4rem;
   }
   h1 {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     color: #aaa;
     letter-spacing: 2px;
   }
   #stats {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #888;
   }
   #controls {
     display: flex;
     gap: 1rem;
     align-items: center;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #888;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   button {
     background: #2a2a4a;
     color: #ccc;
     border: 1px solid #555;
-    padding: 6px 14px;
+    padding: 5px 12px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
   }
   button:hover { background: #3a3a5a; color: #fff; }
   button.active { background: #4a2a2a; border-color: #f66; color: #f99; }
-  #noise-slider { width: 120px; accent-color: #f66; }
-  #mode-toggle { display: flex; gap: 0.5rem; }
-  #grid-container {
-    display: grid;
-    grid-template-columns: 36px repeat(6, 1fr);
-    grid-template-rows: 28px repeat(6, 1fr);
-    gap: 3px;
-    width: min(90vw, 540px);
-    height: min(75vh, 460px);
+  #noise-slider { width: 100px; accent-color: #f66; }
+  #mode-toggle { display: flex; gap: 0.4rem; }
+  #grid-wrapper {
+    width: min(95vw, 1200px);
+    max-height: min(80vh, 800px);
+    overflow: auto;
   }
-  .col-label, .row-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    color: #555;
-    font-weight: bold;
-  }
-  .cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    transition: background-color 0.06s ease;
-    border: 1px solid #333;
+  canvas {
+    display: block;
+    image-rendering: pixelated;
   }
   #calibrating-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.7);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
     color: #ff9;
     z-index: 10;
-    display: none;
   }
   #status-dot {
     display: inline-block;
@@ -91,16 +75,27 @@
   }
   .connected { background: #0f0; }
   .disconnected { background: #f00; }
+  #tooltip {
+    position: fixed;
+    background: rgba(0,0,0,0.85);
+    color: #ff9;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    pointer-events: none;
+    display: none;
+    z-index: 5;
+  }
 </style>
 </head>
 <body>
 
-<h1>PRESSURE MATRIX 6x6</h1>
+<h1 id="title">PRESSURE MATRIX</h1>
 <div id="stats">
   <span id="status-dot" class="disconnected"></span>
   <span id="status-text">Connecting...</span>
   &nbsp;|&nbsp; Scan: <span id="hz">--</span> Hz
-  &nbsp;|&nbsp; Active: <span id="pressed">0</span>/36
+  &nbsp;|&nbsp; Active: <span id="pressed">0</span>/<span id="total">0</span>
 </div>
 
 <div id="controls">
@@ -110,44 +105,121 @@
   </div>
   <button onclick="calibrate()">Calibrate</button>
   <label>
-    Noise floor: <span id="nf-val">200</span>
+    Noise: <span id="nf-val">200</span>
     <input type="range" id="noise-slider" min="0" max="1000" value="200" step="25"
            oninput="setNoiseFloor(this.value)">
   </label>
 </div>
 
-<div id="grid-container">
-  <div class="corner"></div>
-  <div class="col-label">C0</div>
-  <div class="col-label">C1</div>
-  <div class="col-label">C2</div>
-  <div class="col-label">C3</div>
-  <div class="col-label">C4</div>
-  <div class="col-label">C5</div>
+<div id="grid-wrapper">
+  <canvas id="grid-canvas"></canvas>
 </div>
 
 <div id="calibrating-overlay">Calibrating baseline...</div>
+<div id="tooltip"></div>
 
 <script>
-const ROWS = 6, COLS = 6, MAX_VAL = 3500;
-const container = document.getElementById('grid-container');
-const overlay = document.getElementById('calibrating-overlay');
-const cells = [];
+let ROWS = 40, COLS = 30;
 let ws = null;
-let mode = 'filtered';  // 'filtered' or 'raw'
+let mode = 'filtered';
+let latestData = null;
 
-for (let r = 0; r < ROWS; r++) {
-  const rl = document.createElement('div');
-  rl.className = 'row-label';
-  rl.textContent = 'R' + r;
-  container.appendChild(rl);
-  cells[r] = [];
-  for (let c = 0; c < COLS; c++) {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.textContent = '0';
-    container.appendChild(cell);
-    cells[r][c] = cell;
+const canvas = document.getElementById('grid-canvas');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('calibrating-overlay');
+const tooltip = document.getElementById('tooltip');
+
+// Physical PCB trace pitch
+// Row pitch: 3mm trace + 1mm gap = 4mm  (rows run horizontally on mat)
+// Col pitch: 4mm trace + 1mm gap = 5mm  (cols run vertically on mat)
+const LABEL_W = 28;
+const LABEL_H = 18;
+const ROW_PITCH = 4;  // mm — mapped to screen X axis
+const COL_PITCH = 5;  // mm — mapped to screen Y axis
+let cellW = 12;  // one row cell width on screen
+let cellH = 15;  // one col cell height on screen
+
+// Display is TRANSPOSED to match physical mat:
+//   Screen X axis (left→right) = Rows (R39→R0)   = physical left→right
+//   Screen Y axis (top→bottom) = Cols (C29→C0)    = physical top→bottom
+// So canvas is ROWS wide × COLS tall
+
+function resizeCanvas() {
+  const maxW = Math.min(window.innerWidth * 0.95, 1200);
+  const maxH = Math.min(window.innerHeight * 0.72, 800);
+
+  // ROWS on X axis, COLS on Y axis
+  const scaleW = (maxW - LABEL_W) / (ROWS * ROW_PITCH);
+  const scaleH = (maxH - LABEL_H) / (COLS * COL_PITCH);
+  const scale = Math.min(scaleW, scaleH);
+
+  cellW = Math.max(3, Math.floor(ROW_PITCH * scale));
+  cellH = Math.max(4, Math.floor(COL_PITCH * scale));
+
+  canvas.width = LABEL_W + ROWS * cellW;
+  canvas.height = LABEL_H + COLS * cellH;
+  canvas.style.width = canvas.width + 'px';
+  canvas.style.height = canvas.height + 'px';
+}
+
+function drawGrid(data) {
+  const grid = mode === 'raw' ? data.raw : data.grid;
+  const maxV = mode === 'raw' ? 4095 : 3500;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // X-axis labels (top): Row numbers, R39 at left, R0 at right
+  ctx.fillStyle = '#555';
+  ctx.font = `${Math.min(10, cellW - 1)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let sx = 0; sx < ROWS; sx++) {
+    const x = LABEL_W + sx * cellW + cellW / 2;
+    const rowIdx = ROWS - 1 - sx;  // R39 at left
+    const step = cellW < 10 ? 5 : 1;
+    if (rowIdx % step === 0) {
+      ctx.fillText(rowIdx, x, LABEL_H / 2);
+    }
+  }
+
+  // Y-axis labels (left): Col numbers, C29 at top, C0 at bottom
+  ctx.textAlign = 'right';
+  for (let sy = 0; sy < COLS; sy++) {
+    const y = LABEL_H + sy * cellH + cellH / 2;
+    const colIdx = COLS - 1 - sy;  // C29 at top
+    const step = cellH < 10 ? 5 : 1;
+    if (colIdx % step === 0) {
+      ctx.fillText(colIdx, LABEL_W - 3, y);
+    }
+  }
+
+  // Draw cells — transposed and flipped
+  // Screen (sx, sy) → data grid[row][col]
+  //   row = ROWS - 1 - sx   (R39 at left, R0 at right)
+  //   col = COLS - 1 - sy   (C29 at top, C0 at bottom)
+  for (let sy = 0; sy < COLS; sy++) {
+    for (let sx = 0; sx < ROWS; sx++) {
+      const row = ROWS - 1 - sx;
+      const col = COLS - 1 - sy;
+      const val = grid[row] ? (grid[row][col] || 0) : 0;
+      const ratio = Math.min(Math.max(val / maxV, 0), 1.0);
+      const b = Math.round(255 * (1 - ratio));
+
+      const x = LABEL_W + sx * cellW;
+      const y = LABEL_H + sy * cellH;
+
+      ctx.fillStyle = `rgb(${b},${b},${b})`;
+      ctx.fillRect(x, y, cellW - 1, cellH - 1);
+
+      // Show value text only if cells are large enough
+      if (cellW >= 22 && cellH >= 14) {
+        ctx.fillStyle = b < 128 ? '#ff6666' : '#cc0000';
+        ctx.font = `${Math.min(10, cellW - 4)}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(val, x + cellW / 2, y + cellH / 2);
+      }
+    }
   }
 }
 
@@ -155,6 +227,7 @@ function setMode(m) {
   mode = m;
   document.getElementById('btn-filtered').className = m === 'filtered' ? 'active' : '';
   document.getElementById('btn-raw').className = m === 'raw' ? 'active' : '';
+  if (latestData) drawGrid(latestData);
 }
 
 function calibrate() {
@@ -170,40 +243,68 @@ function setNoiseFloor(val) {
   }
 }
 
-function updateGrid(data) {
-  const grid = mode === 'raw' ? data.raw : data.grid;
-  const maxV = mode === 'raw' ? 4095 : MAX_VAL;
+function updateDisplay(data) {
+  latestData = data;
+
+  // Check if grid size changed
+  const newRows = data.rows || ROWS;
+  const newCols = data.cols || COLS;
+  if (newRows !== ROWS || newCols !== COLS) {
+    ROWS = newRows;
+    COLS = newCols;
+    document.getElementById('title').textContent = `PRESSURE MATRIX ${ROWS}x${COLS}`;
+    resizeCanvas();
+  }
 
   overlay.style.display = data.calibrating ? 'flex' : 'none';
+  drawGrid(data);
 
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const val = grid[r][c];
-      const ratio = Math.min(Math.max(val / maxV, 0), 1.0);
-
-      // White -> Black as pressure increases
-      const b = Math.round(255 * (1 - ratio));
-      cells[r][c].style.backgroundColor = `rgb(${b},${b},${b})`;
-
-      // Red text, brighter on dark backgrounds
-      cells[r][c].style.color = b < 128 ? '#ff6666' : '#cc0000';
-      cells[r][c].textContent = val;
-    }
-  }
   document.getElementById('hz').textContent = data.hz.toFixed(1);
   document.getElementById('pressed').textContent = data.pressed;
+  document.getElementById('total').textContent = ROWS * COLS;
 }
+
+// Tooltip on hover — transposed coordinates
+canvas.addEventListener('mousemove', function(e) {
+  if (!latestData) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const sx = Math.floor((mx - LABEL_W) / cellW);
+  const sy = Math.floor((my - LABEL_H) / cellH);
+
+  if (sx >= 0 && sx < ROWS && sy >= 0 && sy < COLS) {
+    const row = ROWS - 1 - sx;
+    const col = COLS - 1 - sy;
+    const grid = mode === 'raw' ? latestData.raw : latestData.grid;
+    const val = grid[row] ? (grid[row][col] || 0) : 0;
+    const bl = latestData.baseline[row] ? (latestData.baseline[row][col] || 0) : 0;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY - 10) + 'px';
+    tooltip.textContent = `R${row} C${col}: ${val} (base: ${bl})`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+
+canvas.addEventListener('mouseleave', function() {
+  tooltip.style.display = 'none';
+});
 
 function connect() {
   const dot = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
   ws = new WebSocket('ws://localhost:8765');
   ws.onopen = () => { dot.className = 'connected'; txt.textContent = 'Connected'; };
-  ws.onmessage = (e) => updateGrid(JSON.parse(e.data));
+  ws.onmessage = (e) => updateDisplay(JSON.parse(e.data));
   ws.onclose = () => { dot.className = 'disconnected'; txt.textContent = 'Reconnecting...'; setTimeout(connect, 1000); };
   ws.onerror = () => ws.close();
 }
 
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); if (latestData) drawGrid(latestData); });
 connect();
 </script>
 </body>

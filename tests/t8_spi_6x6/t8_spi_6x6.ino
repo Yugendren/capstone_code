@@ -1,11 +1,33 @@
-#define SER_PIN   11
-#define SRCLK_PIN 12
-#define RCLK_PIN  13
-#define MUX_S0  4
-#define MUX_S1  5
-#define MUX_S2  6
-#define MUX_S3  7
-#define MUX_SIG 9
+/*
+ * Test 8: 6x6 Grid with Hardware SPI for Shift Register
+ *
+ * Same 6x6 grid as t7, but uses hardware SPI instead of bit-bang
+ * for the 74HC595 shift register. Same wiring, same MUX, same pins.
+ *
+ * Pin mapping:
+ *   IO11 (MOSI) -> 595 SER   (was bit-bang, now SPI)
+ *   IO12 (SCK)  -> 595 SRCLK (was bit-bang, now SPI)
+ *   IO13        -> 595 RCLK  (latch, still GPIO toggle)
+ *   IO4-IO7     -> MUX S0-S3
+ *   IO9         -> MUX SIG (ADC)
+ *
+ * Expected: identical ADC readings to t7, scan rate > 500 Hz
+ */
+
+#include <SPI.h>
+
+// --- Pin definitions (unchanged from t7) ---
+#define RCLK_PIN  13   // Latch — still GPIO
+#define MUX_S0    4
+#define MUX_S1    5
+#define MUX_S2    6
+#define MUX_S3    7
+#define MUX_SIG   9
+
+// SPI pins (ESP32-S3 FSPI defaults)
+#define SPI_MOSI  11   // -> 595 SER
+#define SPI_SCK   12   // -> 595 SRCLK
+#define SPI_MISO  -1   // unused — no data coming back
 
 #define ROWS 6
 #define COLS 6
@@ -15,13 +37,21 @@ int grid[ROWS][COLS];
 unsigned long scanTime = 0;
 int scanCount = 0;
 
+SPIClass *hspi = nullptr;
+
 void setup() {
     Serial.begin(115200);
     delay(3000);
 
-    pinMode(SER_PIN, OUTPUT);
-    pinMode(SRCLK_PIN, OUTPUT);
+    // Initialize SPI on FSPI bus
+    hspi = new SPIClass(FSPI);
+    hspi->begin(SPI_SCK, SPI_MISO, SPI_MOSI, -1);  // SCK, MISO, MOSI, SS
+
+    // Latch pin is still plain GPIO
     pinMode(RCLK_PIN, OUTPUT);
+    digitalWrite(RCLK_PIN, LOW);
+
+    // MUX select pins
     pinMode(MUX_S0, OUTPUT);
     pinMode(MUX_S1, OUTPUT);
     pinMode(MUX_S2, OUTPUT);
@@ -30,34 +60,31 @@ void setup() {
     analogReadResolution(12);
 
     Serial.println("\n==========================================");
-    Serial.println("ESP32-S3 Test 7: 6x6 Grid Matrix Scan");
+    Serial.println("ESP32-S3 Test 8: 6x6 Grid (HW SPI 595)");
     Serial.println("==========================================\n");
 }
 
-void setRow(int row) {
-    // Shift out 8 bits MSB first, only 'row' bit is HIGH
-    for (int i = 7; i >= 0; i--) {
-        digitalWrite(SER_PIN, (i == row) ? HIGH : LOW);
-        digitalWrite(SRCLK_PIN, HIGH);
-        delayMicroseconds(5);
-        digitalWrite(SRCLK_PIN, LOW);
-    }
+// Shift one byte via SPI, then latch
+void shiftOut595(uint8_t data) {
+    hspi->beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
+    hspi->transfer(data);
+    hspi->endTransaction();
+
+    // Pulse latch
     digitalWrite(RCLK_PIN, HIGH);
-    delayMicroseconds(5);
+    delayMicroseconds(1);
     digitalWrite(RCLK_PIN, LOW);
-    delayMicroseconds(20);
+}
+
+void setRow(int row) {
+    // One-hot pattern: only the target row bit is HIGH
+    uint8_t pattern = (1 << row);
+    shiftOut595(pattern);
+    delayMicroseconds(10);  // settle time after latch
 }
 
 void allRowsOff() {
-    for (int i = 0; i < 8; i++) {
-        digitalWrite(SER_PIN, LOW);
-        digitalWrite(SRCLK_PIN, HIGH);
-        delayMicroseconds(5);
-        digitalWrite(SRCLK_PIN, LOW);
-    }
-    digitalWrite(RCLK_PIN, HIGH);
-    delayMicroseconds(5);
-    digitalWrite(RCLK_PIN, LOW);
+    shiftOut595(0x00);
 }
 
 void setMuxChannel(int ch) {
@@ -65,7 +92,7 @@ void setMuxChannel(int ch) {
     digitalWrite(MUX_S1, (ch >> 1) & 0x01);
     digitalWrite(MUX_S2, (ch >> 2) & 0x01);
     digitalWrite(MUX_S3, (ch >> 3) & 0x01);
-    delayMicroseconds(20);
+    delayMicroseconds(5);  // MUX settling
 }
 
 void scanGrid() {
