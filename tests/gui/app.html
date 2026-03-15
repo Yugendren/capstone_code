@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PressureMat</title>
+<style>
+  :root {
+    --bg-primary: #1a1a2e;
+    --bg-surface: #1f2b47;
+    --bg-input: #162035;
+    --accent: #4a90d9;
+    --accent-hover: #5da0e9;
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --border: #2a3a55;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Connection Screen ─────────────────────────────────── */
+  #connection-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 24px;
+  }
+  #connection-screen .logo { font-size: 42px; font-weight: 700; color: var(--accent); letter-spacing: 4px; }
+  #connection-screen .subtitle { font-size: 14px; color: var(--text-dim); }
+  .port-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 380px;
+  }
+  .port-panel label { font-size: 13px; color: var(--text-dim); }
+  .port-row { display: flex; gap: 8px; }
+  .port-row select {
+    flex: 1;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .port-row select option.esp32 { color: var(--accent); font-weight: 600; }
+
+  .btn {
+    background: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #2a3f60; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .btn-danger:hover { background: #c82333; }
+  .btn-success { background: var(--success); color: #fff; border-color: var(--success); }
+  .btn-success:hover { background: #218838; }
+  .btn-sm { padding: 4px 12px; font-size: 12px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .connect-btn { width: 100%; padding: 10px; font-size: 15px; }
+  .conn-status { font-size: 13px; text-align: center; min-height: 20px; }
+  .conn-status.error { color: var(--danger); }
+  .conn-status.ok { color: var(--success); }
+
+  /* ── Main View ─────────────────────────────────────────── */
+  #main-view { display: none; flex-direction: column; height: 100vh; }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .topbar-section { display: flex; align-items: center; gap: 8px; }
+  .topbar-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .status-dot.on { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .status-dot.off { background: var(--danger); }
+  .port-label { font-size: 13px; color: var(--text-dim); }
+  .hz-label { font-size: 13px; color: var(--text-dim); }
+
+  .exercise-select {
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+
+  .session-badge { font-size: 12px; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
+  .badge-idle { background: #2a2a4a; color: #888; }
+  .badge-recording { background: #3a1a1a; color: #f66; animation: badge-pulse 1.5s infinite; }
+  .badge-stopped { background: #1a3a1a; color: #6f6; }
+  @keyframes badge-pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+  .timer { font-size: 18px; font-weight: 700; font-family: 'Consolas', monospace; letter-spacing: 1px; }
+
+  .topbar-alert { transition: background 0.3s; }
+  .topbar-alert.flash { background: rgba(220, 53, 69, 0.3); }
+
+  .mute-btn {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 18px; cursor: pointer; padding: 2px 6px;
+  }
+  .mute-btn:hover { color: var(--text); }
+  .mute-btn.muted { color: var(--danger); }
+
+  .gear-btn {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 18px; cursor: pointer; padding: 2px 6px;
+  }
+  .gear-btn:hover { color: var(--text); }
+
+  /* Content area */
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    padding: 4px 8px;
+    gap: 2px;
+    min-height: 0;
+  }
+
+  /* Controls bar */
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-wrap: wrap;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mode-toggle { display: flex; gap: 4px; }
+  .mode-toggle .btn.active { background: #4a2a2a; border-color: #f66; color: #f99; }
+  #noise-slider { width: 100px; accent-color: var(--danger); }
+
+  /* Color legend */
+  .color-legend {
+    display: flex; gap: 12px; font-size: 11px;
+    color: var(--text-dim); align-items: center;
+  }
+  .legend-swatch {
+    display: inline-block; width: 14px; height: 14px;
+    border-radius: 2px; margin-right: 3px; vertical-align: middle;
+  }
+
+  /* Canvas — fill available space */
+  #grid-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    width: 100%;
+  }
+  #grid-canvas { display: block; }
+
+  /* Graph — fixed height, never overlaps heatmap */
+  #graph-wrapper {
+    width: 100%;
+    height: 150px;
+    flex-shrink: 0;
+    flex-grow: 0;
+    display: none;
+  }
+  #graph-canvas { display: block; width: 100%; height: 100%; }
+  .graph-controls {
+    display: flex; gap: 10px; align-items: center;
+    font-size: 12px; color: var(--text-dim); justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed; background: rgba(0,0,0,0.9); color: #ff9;
+    padding: 5px 10px; border-radius: 4px; font-size: 12px;
+    pointer-events: none; display: none; z-index: 100; white-space: nowrap;
+  }
+
+  /* Calibrating overlay */
+  #calibrating-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); display: none;
+    align-items: center; justify-content: center;
+    font-size: 22px; color: var(--warning); z-index: 50;
+  }
+
+  /* Countdown overlay */
+  #countdown-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8); display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; z-index: 70;
+  }
+  .countdown-number {
+    font-size: 120px; font-weight: 800; color: var(--accent);
+    text-shadow: 0 0 40px rgba(74,144,217,0.5);
+    transition: transform 0.2s, opacity 0.2s;
+  }
+  .countdown-label { font-size: 20px; color: var(--text-dim); }
+  .countdown-go {
+    font-size: 100px; font-weight: 800; color: var(--success);
+    text-shadow: 0 0 40px rgba(40,167,69,0.6);
+  }
+
+  /* Spine calibration modal */
+  #spine-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center; z-index: 60;
+  }
+  .spine-panel {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 28px 36px; min-width: 360px; text-align: center;
+  }
+  .spine-panel h3 { margin-bottom: 16px; font-size: 18px; }
+  .spine-progress { display: flex; gap: 14px; justify-content: center; margin-bottom: 20px; }
+  .spine-step { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; }
+  .spine-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--border); display: flex;
+    align-items: center; justify-content: center; font-size: 10px;
+  }
+  .spine-dot.done { background: var(--success); border-color: var(--success); }
+  .spine-dot.active { border-color: var(--accent); background: rgba(74,144,217,0.2); }
+  .spine-instruction { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; min-height: 40px; }
+  .spine-actions { display: flex; gap: 10px; justify-content: center; }
+  .spine-result { font-size: 13px; color: var(--success); margin-top: 10px; min-height: 20px; }
+
+  /* Force calibration modal */
+  #force-cal-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center; z-index: 60;
+  }
+  .force-panel {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 28px 36px; min-width: 440px; text-align: center;
+  }
+  .force-panel h3 { margin-bottom: 16px; font-size: 18px; }
+  .force-progress { display: flex; gap: 14px; justify-content: center; margin-bottom: 20px; }
+  .force-step { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; }
+  .force-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--border); display: flex;
+    align-items: center; justify-content: center; font-size: 10px;
+  }
+  .force-dot.done { background: var(--success); border-color: var(--success); }
+  .force-dot.active { border-color: var(--accent); background: rgba(74,144,217,0.2); }
+  .force-instruction { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; min-height: 40px; }
+  .force-actions { display: flex; gap: 10px; justify-content: center; }
+  .force-result { font-size: 13px; color: var(--success); margin-top: 10px; min-height: 20px; }
+  .force-weight-input {
+    display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 16px;
+  }
+  .force-weight-input input {
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 10px; font-size: 14px; width: 100px; text-align: center;
+  }
+  .force-weight-input span { font-size: 13px; color: var(--text-dim); }
+  .force-summary { text-align: left; font-size: 13px; margin: 12px 0; }
+  .force-summary div { padding: 3px 0; display: flex; justify-content: space-between; }
+
+  /* Session results overlay */
+  #results-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center; z-index: 55;
+  }
+  .results-panel {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 28px 36px; min-width: 380px; text-align: center;
+  }
+  .results-panel h3 { margin-bottom: 16px; font-size: 18px; }
+  .results-stats { text-align: left; font-size: 14px; margin-bottom: 16px; }
+  .results-stats div { padding: 4px 0; display: flex; justify-content: space-between; }
+  .results-stats .label { color: var(--text-dim); }
+  .results-check { color: var(--success); margin-right: 6px; }
+  .results-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+
+  /* Settings modal */
+  #settings-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center; z-index: 65;
+  }
+  .settings-panel {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 28px 36px; min-width: 420px;
+  }
+  .settings-panel h3 { margin-bottom: 20px; font-size: 18px; text-align: center; }
+  .setting-group { margin-bottom: 18px; }
+  .setting-group label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  .setting-group select, .setting-group input[type=number] {
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 10px; font-size: 13px; width: 100%;
+  }
+  .setting-group input[type=range] { width: 100%; accent-color: var(--accent); }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .setting-row label { font-size: 13px; color: var(--text-dim); margin-bottom: 0; }
+  .settings-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+
+  /* Nearest vertebra */
+  .nearest-label {
+    font-size: 13px; color: var(--text-dim); padding: 2px 8px;
+    background: rgba(0,255,136,0.1); border-radius: 4px;
+  }
+
+  /* Error banner */
+  .error-banner {
+    display: none; background: var(--danger); color: #fff;
+    padding: 8px 16px; text-align: center; font-size: 13px; flex-shrink: 0;
+  }
+  .error-banner .btn { margin-left: 12px; color: #fff; border-color: #fff; }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ══════ Connection Screen ══════ -->
+<div id="connection-screen">
+  <div class="logo">PRESSUREMAT</div>
+  <div class="subtitle">Pressure Sensor Matrix — Desktop Monitor</div>
+  <div class="port-panel">
+    <label>Serial Port</label>
+    <div class="port-row">
+      <select id="port-select"><option value="">Scanning...</option></select>
+      <button class="btn" onclick="refreshPorts()">Refresh</button>
+    </div>
+    <button class="btn btn-primary connect-btn" id="connect-btn" onclick="doConnect()">Connect</button>
+    <div class="conn-status" id="conn-status"></div>
+  </div>
+</div>
+
+<!-- ══════ Main View ══════ -->
+<div id="main-view">
+  <div class="error-banner" id="error-banner">
+    <span id="error-text"></span>
+    <button class="btn btn-sm" onclick="doReconnect()">Reconnect</button>
+    <button class="btn btn-sm" onclick="hideError()">Dismiss</button>
+  </div>
+
+  <div class="topbar topbar-alert" id="topbar">
+    <div class="topbar-section">
+      <span class="status-dot on" id="main-status-dot"></span>
+      <span class="port-label" id="main-port-label">COM3</span>
+      <span class="hz-label" id="main-hz">-- Hz</span>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-section">
+      <select class="exercise-select" id="exercise-select">
+        <option value="Free Flow">Free Flow</option>
+        <option value="L1 Mobilization">L1 Mobilization</option>
+        <option value="L2 Mobilization">L2 Mobilization</option>
+        <option value="L3 Mobilization">L3 Mobilization</option>
+        <option value="L4 Mobilization">L4 Mobilization</option>
+        <option value="L5 Mobilization">L5 Mobilization</option>
+      </select>
+      <button class="btn btn-success btn-sm" id="session-btn" onclick="toggleSession()">Start Session</button>
+      <span class="timer" id="session-timer">00:00</span>
+      <span class="session-badge badge-idle" id="session-badge">Idle</span>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-section">
+      <span class="nearest-label" id="nearest-label" style="display:none">Peak near: --</span>
+      <button class="btn btn-sm" onclick="openSpineCalibration()">Calibrate Spine</button>
+      <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
+        <input type="checkbox" id="spine-overlay-toggle" checked onchange="showSpineOverlay=this.checked"> Spine
+      </label>
+      <button class="btn btn-sm" onclick="openForceCalibration()">Calibrate Force</button>
+      <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
+        <input type="checkbox" id="force-cal-toggle" onchange="forceCalEnabled=this.checked; if(latestData) drawGrid(latestData)"> Force
+      </label>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-section">
+      <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Mute/Unmute alerts">&#x1f50a;</button>
+      <button class="gear-btn" onclick="openSettings()" title="Settings">&#x2699;</button>
+      <button class="btn btn-sm" onclick="doDisconnect()">Disconnect</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="controls">
+      <div class="mode-toggle">
+        <button class="btn btn-sm active" id="btn-filtered" onclick="setMode('filtered')">Filtered</button>
+        <button class="btn btn-sm" id="btn-raw" onclick="setMode('raw')">Raw</button>
+      </div>
+      <button class="btn btn-sm" onclick="doCalibrate()">Calibrate Baseline</button>
+      <label>
+        Noise: <span id="nf-val">200</span>
+        <input type="range" id="noise-slider" min="0" max="1000" value="200" step="25"
+               oninput="setNoiseFloor(this.value)">
+      </label>
+      <div class="color-legend" id="color-legend" style="display:none">
+        <span><span class="legend-swatch" style="background:#28a745"></span>0-1000</span>
+        <span><span class="legend-swatch" style="background:#ffc107"></span>1001-2500</span>
+        <span><span class="legend-swatch" style="background:#dc3545"></span>2501-4095</span>
+      </div>
+    </div>
+
+    <div id="grid-wrapper">
+      <canvas id="grid-canvas"></canvas>
+    </div>
+
+    <div class="graph-controls" id="graph-controls" style="display:none">
+      <span id="tracking-label">Tracking: -- (auto)</span>
+      <div class="mode-toggle">
+        <button class="btn btn-sm active" id="btn-amplitude" onclick="setGraphMode('amplitude')">Amplitude</button>
+        <button class="btn btn-sm" id="btn-displacement" onclick="setGraphMode('displacement')">Displacement</button>
+      </div>
+      <span id="displacement-note" style="display:none;font-size:10px;color:#a88;font-style:italic">Note: visual representation only, not actual displacement</span>
+    </div>
+    <div id="graph-wrapper">
+      <canvas id="graph-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Spine preview bar — shown after scan so user sees heatmap with detected points -->
+<div id="spine-preview-bar" style="display:none; position:fixed; bottom:0; left:0; right:0;
+    background:var(--bg-surface); border-top:2px solid var(--accent);
+    padding:10px 20px; z-index:70; display:none;
+    justify-content:center; align-items:center; gap:20px; flex-wrap:wrap;">
+  <span style="font-size:14px; color:var(--text);" id="spine-preview-text">
+    Review the detected spine positions on the heatmap (orange dots).
+  </span>
+  <button class="btn btn-success" onclick="acceptSpinePreview()">Accept</button>
+  <button class="btn btn-danger" onclick="redoSpinePreview()">Redo</button>
+</div>
+
+<!-- Overlays -->
+<div id="calibrating-overlay">Calibrating baseline...</div>
+<div id="tooltip"></div>
+
+<div id="countdown-overlay">
+  <div class="countdown-label">Get Ready...</div>
+  <div class="countdown-number" id="countdown-number">3</div>
+</div>
+
+<div id="spine-modal">
+  <div class="spine-panel" style="min-width:440px">
+    <h3>Spine Calibration</h3>
+    <div class="spine-instruction" id="spine-instruction">
+      Lie face-up on the mat and slowly roll/drag along your spine.<br>
+      The heatmap will show a persistent trail of your movement.<br>
+      The 5 strongest points will be auto-detected as L1–L5.
+    </div>
+    <div class="spine-progress" id="spine-progress"></div>
+    <div class="spine-result" id="spine-result"></div>
+    <div class="spine-actions">
+      <button class="btn btn-primary" id="spine-start-btn" onclick="startSpineScan()">Start Scan</button>
+      <button class="btn btn-success" id="spine-confirm-btn" onclick="confirmSpine()" style="display:none">Confirm</button>
+      <button class="btn" id="spine-restart-btn" onclick="restartSpine()" style="display:none">Redo</button>
+      <button class="btn" id="spine-cancel-btn" onclick="cancelSpine()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="force-cal-modal">
+  <div class="force-panel">
+    <h3 id="force-cal-title">Force Calibration</h3>
+    <div class="force-instruction" id="force-instruction">
+      Calibrate force readings using a known weight.<br>
+      Place the weight at 5 positions (center + 4 corners).
+    </div>
+    <div class="force-weight-input" id="force-weight-section">
+      <span>Weight:</span>
+      <input type="number" id="force-weight-input" value="300" min="1" max="10000" step="1">
+      <span>grams</span>
+      <span id="force-weight-newtons" style="color:var(--accent)">(= 2.943 N)</span>
+    </div>
+    <div class="force-progress" id="force-progress"></div>
+    <div class="force-result" id="force-result"></div>
+    <div class="force-summary" id="force-summary" style="display:none"></div>
+    <div class="force-actions">
+      <button class="btn btn-primary" id="force-start-btn" onclick="startForceCalibration()">Start</button>
+      <button class="btn btn-primary" id="force-capture-btn" onclick="captureForcePoint()" style="display:none">Capture</button>
+      <button class="btn btn-success" id="force-accept-btn" onclick="acceptForceCalibration()" style="display:none">Accept</button>
+      <button class="btn" id="force-redo-btn" onclick="redoForceCalibration()" style="display:none">Redo</button>
+      <button class="btn" id="force-cancel-btn" onclick="cancelForceCalibration()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="results-overlay">
+  <div class="results-panel">
+    <h3>Session Complete</h3>
+    <div class="results-stats" id="results-stats"></div>
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="openRecordings()">Open Recordings Folder</button>
+      <button class="btn btn-success" onclick="closeResults()">New Session</button>
+    </div>
+  </div>
+</div>
+
+<div id="settings-modal">
+  <div class="settings-panel">
+    <h3>Settings</h3>
+
+    <div class="setting-group">
+      <label>Cell Display on Heatmap</label>
+      <select id="set-cell-display">
+        <option value="none">None (color only)</option>
+        <option value="adc">ADC Value</option>
+        <option value="force">Approximate Force (N)</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <label>Countdown Delay Before Recording (seconds)</label>
+      <input type="number" id="set-countdown" min="0" max="10" step="1" value="3">
+    </div>
+
+    <div class="setting-group">
+      <label>Noise Floor: <span id="set-nf-val">200</span></label>
+      <input type="range" id="set-noise-floor" min="0" max="1000" value="200" step="25"
+             oninput="document.getElementById('set-nf-val').textContent=this.value">
+    </div>
+
+    <div class="setting-group">
+      <label>Alert Volume: <span id="set-vol-val">30</span>%</label>
+      <input type="range" id="set-alert-volume" min="0" max="100" value="30" step="5"
+             oninput="document.getElementById('set-vol-val').textContent=this.value">
+    </div>
+
+    <div class="setting-group">
+      <label>Red Alert Threshold (ADC)</label>
+      <input type="number" id="set-thresh-high" min="500" max="4095" step="100" value="2500">
+    </div>
+
+    <div class="setting-group">
+      <label>Yellow Warning Threshold (ADC)</label>
+      <input type="number" id="set-thresh-low" min="100" max="4000" step="100" value="1000">
+    </div>
+
+    <div class="setting-row">
+      <label>Show Spine Overlay</label>
+      <input type="checkbox" id="set-spine-overlay" checked>
+    </div>
+
+    <div class="setting-row">
+      <label>Show Row/Col Axis Labels</label>
+      <input type="checkbox" id="set-axis-labels" checked>
+    </div>
+
+    <div class="setting-group">
+      <label>Force Calibration</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="set-force-status" style="font-size:13px;color:var(--text-dim)">Not calibrated</span>
+        <button class="btn btn-sm" onclick="closeSettings();openForceCalibration()">Calibrate</button>
+        <button class="btn btn-sm btn-danger" id="set-force-clear-btn" onclick="clearForceCalUI()" style="display:none">Clear</button>
+      </div>
+    </div>
+
+    <div class="settings-actions">
+      <button class="btn btn-primary" onclick="saveSettingsUI()">Save</button>
+      <button class="btn" onclick="closeSettings()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════
+let ROWS = 40, COLS = 30;
+let ws = null;
+let mode = 'filtered';
+let latestData = null;
+let sessionActive = false;
+let sessionStart = 0;
+let timerInterval = null;
+let showSpineOverlay = true;
+let showAxisLabels = true;
+
+// Settings
+let cellDisplayMode = 'none';   // 'none' | 'adc' | 'force'
+let countdownDelay = 3;         // seconds, 0 = skip
+let alertVolume = 0.3;          // 0-1
+let threshLow = 1000;
+let threshHigh = 2500;
+
+// Heatmap
+const canvas = document.getElementById('grid-canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+const overlay = document.getElementById('calibrating-overlay');
+
+let LABEL_W = 28;
+let LABEL_H = 18;
+const ROW_PITCH = 4;
+const COL_PITCH = 5;
+let cellW = 12;
+let cellH = 15;
+
+// Audio — lazy init on first user gesture
+let audioCtx = null;
+let alertMuted = false;
+let alertActive = false;
+
+function ensureAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+// Init audio context on any user click so browser allows playback
+document.addEventListener('click', ensureAudioCtx, { once: true });
+
+// Graph
+let graphMode = 'amplitude';
+const GRAPH_MAX_SAMPLES = 600;
+let graphBuffer = new Float64Array(GRAPH_MAX_SAMPLES);
+let graphHead = 0;
+let graphCount = 0;
+let graphTracking = 'auto';
+let graphCurrentLabel = '--';
+const graphCanvas = document.getElementById('graph-canvas');
+const graphCtx = graphCanvas.getContext('2d');
+
+// Force calibration
+let forceGainMap = null;        // 40×30 gains from backend
+let forceCalEnabled = false;    // checkbox state
+
+// Spine
+const SPINE_LABELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
+let spinePreviewMarkers = null;  // temp markers shown during preview
+
+// ═══════════════════════════════════════════════════════════
+// Connection Screen
+// ═══════════════════════════════════════════════════════════
+
+async function refreshPorts() {
+  const sel = document.getElementById('port-select');
+  const status = document.getElementById('conn-status');
+  sel.innerHTML = '<option value="">Scanning...</option>';
+  status.textContent = '';
+  try {
+    if (!window.pywebview || !window.pywebview.api) {
+      sel.innerHTML = '<option value="">Waiting for API...</option>';
+      status.className = 'conn-status error';
+      status.textContent = 'pywebview API not ready — retrying in 1s...';
+      setTimeout(refreshPorts, 1000);
+      return;
+    }
+    const ports = await pywebview.api.get_serial_ports();
+    sel.innerHTML = '';
+    if (!ports || ports.length === 0) {
+      sel.innerHTML = '<option value="">No COM ports found — plug in ESP32 and Refresh</option>';
+      status.className = 'conn-status';
+      status.textContent = 'No serial ports detected.';
+      return;
+    }
+    for (const p of ports) {
+      const opt = document.createElement('option');
+      opt.value = p.port;
+      opt.textContent = `${p.port} — ${p.description}`;
+      if (p.is_esp32) { opt.className = 'esp32'; opt.textContent += ' [ESP32]'; }
+      sel.appendChild(opt);
+    }
+    sel.selectedIndex = 0;
+    status.className = 'conn-status ok';
+    status.textContent = ports.length + ' port(s) found';
+    try {
+      const settings = await pywebview.api.get_settings();
+      if (settings) applyLoadedSettings(settings);
+    } catch (e2) {}
+  } catch (e) {
+    sel.innerHTML = '<option value="">Error scanning ports</option>';
+    status.className = 'conn-status error';
+    status.textContent = 'API error: ' + (e.message || e);
+  }
+}
+
+function applyLoadedSettings(s) {
+  // Port
+  if (s.last_port) {
+    const sel = document.getElementById('port-select');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === s.last_port) { sel.selectedIndex = i; break; }
+    }
+  }
+  if (s.noise_floor !== undefined) {
+    document.getElementById('noise-slider').value = s.noise_floor;
+    document.getElementById('nf-val').textContent = s.noise_floor;
+    pywebview.api.set_noise_floor(s.noise_floor);
+  }
+  if (s.cell_display) cellDisplayMode = s.cell_display;
+  if (s.countdown_delay !== undefined) countdownDelay = s.countdown_delay;
+  if (s.alert_volume !== undefined) alertVolume = s.alert_volume / 100;
+  if (s.thresh_low !== undefined) threshLow = s.thresh_low;
+  if (s.thresh_high !== undefined) threshHigh = s.thresh_high;
+  if (s.show_spine_overlay !== undefined) {
+    showSpineOverlay = s.show_spine_overlay;
+    document.getElementById('spine-overlay-toggle').checked = showSpineOverlay;
+  }
+  if (s.show_axis_labels !== undefined) showAxisLabels = s.show_axis_labels;
+  if (s.force_cal_enabled !== undefined) {
+    forceCalEnabled = s.force_cal_enabled;
+    document.getElementById('force-cal-toggle').checked = forceCalEnabled;
+  }
+  // Load force gain map from backend
+  try {
+    pywebview.api.get_force_gain_map().then(map => {
+      if (map) forceGainMap = map;
+    });
+  } catch(e) {}
+}
+
+async function doConnect() {
+  const port = document.getElementById('port-select').value;
+  if (!port) return;
+  const status = document.getElementById('conn-status');
+  const btn = document.getElementById('connect-btn');
+  btn.disabled = true;
+  status.className = 'conn-status';
+  status.textContent = 'Connecting...';
+  try {
+    const result = await pywebview.api.connect(port);
+    if (result.success) {
+      status.className = 'conn-status ok';
+      status.textContent = 'Connected!';
+      showMainView(port);
+    } else {
+      status.className = 'conn-status error';
+      status.textContent = result.message;
+    }
+  } catch (e) {
+    status.className = 'conn-status error';
+    status.textContent = 'Connection failed: ' + e;
+  }
+  btn.disabled = false;
+}
+
+function showMainView(port) {
+  document.getElementById('connection-screen').style.display = 'none';
+  document.getElementById('main-view').style.display = 'flex';
+  document.getElementById('main-port-label').textContent = port;
+  resizeCanvas();
+  connectWebSocket();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Disconnect / Reconnect
+// ═══════════════════════════════════════════════════════════
+
+async function doDisconnect() {
+  if (sessionActive) await toggleSession();
+  if (ws) { ws.close(); ws = null; }
+  await pywebview.api.disconnect();
+  document.getElementById('main-view').style.display = 'none';
+  document.getElementById('connection-screen').style.display = 'flex';
+  document.getElementById('conn-status').textContent = '';
+  refreshPorts();
+}
+
+async function doReconnect() {
+  hideError();
+  const port = document.getElementById('main-port-label').textContent;
+  const result = await pywebview.api.connect(port);
+  if (result.success) {
+    document.getElementById('main-status-dot').className = 'status-dot on';
+    connectWebSocket();
+  } else {
+    showError('Reconnect failed: ' + result.message);
+  }
+}
+
+function showError(msg) {
+  document.getElementById('error-text').textContent = msg;
+  document.getElementById('error-banner').style.display = 'block';
+}
+function hideError() { document.getElementById('error-banner').style.display = 'none'; }
+
+// ═══════════════════════════════════════════════════════════
+// WebSocket
+// ═══════════════════════════════════════════════════════════
+
+async function connectWebSocket() {
+  if (ws) ws.close();
+  let port = 8765;
+  try { port = await pywebview.api.get_ws_port(); } catch(e) {}
+  ws = new WebSocket('ws://127.0.0.1:' + port);
+  ws.onopen = () => { document.getElementById('main-status-dot').className = 'status-dot on'; };
+  ws.onmessage = (e) => updateDisplay(JSON.parse(e.data));
+  ws.onclose = () => {
+    document.getElementById('main-status-dot').className = 'status-dot off';
+    setTimeout(async () => {
+      try {
+        const st = await pywebview.api.get_connection_status();
+        if (st.connected) connectWebSocket();
+        else showError('Serial connection lost.');
+      } catch(e) {}
+    }, 1000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Heatmap — fills available space
+// ═══════════════════════════════════════════════════════════
+
+function resizeCanvas() {
+  const wrapper = document.getElementById('grid-wrapper');
+  // wrapper.clientHeight already accounts for the graph taking space
+  // because grid-wrapper has flex:1 and graph-wrapper has flex-shrink:0
+  const availW = wrapper.clientWidth || window.innerWidth - 20;
+  const availH = wrapper.clientHeight || 400;
+
+  LABEL_W = showAxisLabels ? 28 : 2;
+  LABEL_H = showAxisLabels ? 18 : 2;
+
+  const scaleW = (availW - LABEL_W) / (ROWS * ROW_PITCH);
+  const scaleH = (availH - LABEL_H) / (COLS * COL_PITCH);
+  const scale = Math.min(scaleW, scaleH);
+
+  cellW = Math.max(3, Math.floor(ROW_PITCH * scale));
+  cellH = Math.max(4, Math.floor(COL_PITCH * scale));
+
+  canvas.width = LABEL_W + ROWS * cellW;
+  canvas.height = LABEL_H + COLS * cellH;
+  canvas.style.width = canvas.width + 'px';
+  canvas.style.height = canvas.height + 'px';
+}
+
+// ADC to approximate force (Newtons)
+// If calibrated gain map is available and enabled, use per-cell gain
+// Otherwise fallback to crude linear: F(N) = ADC * 0.01
+function adcToForce(adc, row, col) {
+  if (adc <= 0) return 0;
+  if (forceGainMap && forceCalEnabled && row !== undefined && col !== undefined) {
+    return (adc * forceGainMap[row][col]).toFixed(2);
+  }
+  return (adc * 0.01).toFixed(1);
+}
+
+function drawGrid(data) {
+  const grid = mode === 'raw' ? data.raw : data.grid;
+  const maxV = mode === 'raw' ? 4095 : 3500;
+  const region = data.exercise_region;
+  const hasRegion = region && sessionActive;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Axis labels
+  if (showAxisLabels) {
+    ctx.fillStyle = '#555';
+    ctx.font = `${Math.min(10, cellW - 1)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let sx = 0; sx < ROWS; sx++) {
+      const rowIdx = ROWS - 1 - sx;
+      const step = cellW < 10 ? 5 : 1;
+      if (rowIdx % step === 0) {
+        ctx.fillText(rowIdx, LABEL_W + sx * cellW + cellW / 2, LABEL_H / 2);
+      }
+    }
+    ctx.textAlign = 'right';
+    for (let sy = 0; sy < COLS; sy++) {
+      const colIdx = COLS - 1 - sy;
+      const step = cellH < 10 ? 5 : 1;
+      if (colIdx % step === 0) {
+        ctx.fillText(colIdx, LABEL_W - 3, LABEL_H + sy * cellH + cellH / 2);
+      }
+    }
+  }
+
+  let anyRed = false;
+
+  // Determine if cells are big enough for text
+  const showText = cellDisplayMode !== 'none' && cellW >= 16 && cellH >= 12;
+  const textSize = Math.min(9, cellW - 3, cellH - 3);
+
+  for (let sy = 0; sy < COLS; sy++) {
+    for (let sx = 0; sx < ROWS; sx++) {
+      const row = ROWS - 1 - sx;
+      const col = COLS - 1 - sy;
+      const val = grid[row] ? (grid[row][col] || 0) : 0;
+      const x = LABEL_W + sx * cellW;
+      const y = LABEL_H + sy * cellH;
+
+      const inRegion = hasRegion &&
+        row >= region[0] && row <= region[1] &&
+        col >= region[2] && col <= region[3];
+
+      if (inRegion && mode !== 'raw') {
+        if (val > threshHigh) {
+          ctx.fillStyle = '#dc3545';
+          anyRed = true;
+        } else if (val > threshLow) {
+          ctx.fillStyle = '#ffc107';
+        } else {
+          ctx.fillStyle = val > 0 ? '#28a745' : '#111';
+        }
+      } else {
+        const ratio = Math.min(Math.max(val / maxV, 0), 1.0);
+        const b = Math.round(255 * (1 - ratio));
+        ctx.fillStyle = `rgb(${b},${b},${b})`;
+      }
+
+      ctx.fillRect(x, y, cellW - 1, cellH - 1);
+
+      // Cell text
+      if (showText && val > 0) {
+        const brightness = ctx.fillStyle;
+        // Parse fill to decide text color
+        const dark = val > maxV * 0.4;
+        ctx.fillStyle = dark ? '#ff9' : '#a00';
+        ctx.font = `${textSize}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const label = cellDisplayMode === 'force' ? adcToForce(val, row, col) : val;
+        ctx.fillText(label, x + cellW / 2, y + cellH / 2);
+      }
+    }
+  }
+
+  // Exercise region border
+  if (hasRegion) {
+    const x1 = LABEL_W + (ROWS - 1 - region[1]) * cellW - 1;
+    const y1 = LABEL_H + (COLS - 1 - region[3]) * cellH - 1;
+    const x2 = LABEL_W + (ROWS - region[0]) * cellW;
+    const y2 = LABEL_H + (COLS - region[2]) * cellH;
+    ctx.strokeStyle = '#ffc107';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    ctx.setLineDash([]);
+  }
+
+  // Show spine overlay: use preview markers during calibration, otherwise normal
+  const activeMarkers = spinePreviewMarkers || (showSpineOverlay ? data.spine_markers : null);
+  if (activeMarkers) drawSpineOverlay(activeMarkers);
+
+  // Spine trail overlay during calibration scan
+  if (spineTrailGrid) {
+    drawSpineTrail();
+  }
+
+  handleAlert(anyRed);
+  document.getElementById('color-legend').style.display = hasRegion ? 'flex' : 'none';
+}
+
+function drawSpineTrail() {
+  const maxTrail = 3500;
+  for (let sy = 0; sy < COLS; sy++) {
+    for (let sx = 0; sx < ROWS; sx++) {
+      const row = ROWS - 1 - sx;
+      const col = COLS - 1 - sy;
+      const val = spineTrailGrid[row][col];
+      if (val <= 0) continue;
+      const ratio = Math.min(val / maxTrail, 1.0);
+      const x = LABEL_W + sx * cellW;
+      const y = LABEL_H + sy * cellH;
+      // Cyan overlay for trail
+      ctx.fillStyle = `rgba(0, 200, 255, ${0.15 + ratio * 0.6})`;
+      ctx.fillRect(x, y, cellW - 1, cellH - 1);
+    }
+  }
+  // Draw detected peaks if available
+  if (spineDetectedPeaks) {
+    for (const p of spineDetectedPeaks) {
+      const px = LABEL_W + (ROWS - 1 - p.row) * cellW + cellW / 2;
+      const py = LABEL_H + (COLS - 1 - p.col) * cellH + cellH / 2;
+      const r = Math.max(cellW, cellH) * 1.0;
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 100, 0, 0.3)';
+      ctx.fill();
+      ctx.strokeStyle = '#ff6400';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(p.label, px, py - r - 3);
+    }
+  }
+}
+
+function drawSpineOverlay(markers) {
+  const labels = Object.keys(markers).sort();
+  if (labels.length === 0) return;
+  const points = [];
+  for (const label of labels) {
+    const [row, col] = markers[label];
+    const px = LABEL_W + (ROWS - 1 - row) * cellW + cellW / 2;
+    const py = LABEL_H + (COLS - 1 - col) * cellH + cellH / 2;
+    points.push({ label, px, py });
+  }
+  if (points.length > 1) {
+    ctx.strokeStyle = 'rgba(0,255,136,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(points[0].px, points[0].py);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].px, points[i].py);
+    ctx.stroke();
+  }
+  for (const pt of points) {
+    const r = Math.max(cellW, cellH) * 0.8;
+    ctx.beginPath();
+    ctx.arc(pt.px, pt.py, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,255,136,0.15)';
+    ctx.fill();
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(pt.label, pt.px, pt.py - r - 2);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Alert System — louder, more reliable
+// ═══════════════════════════════════════════════════════════
+
+function handleAlert(anyRed) {
+  const topbar = document.getElementById('topbar');
+  if (anyRed) {
+    topbar.classList.add('flash');
+    if (!alertActive && !alertMuted) playBeep(800, 0.25);
+    alertActive = true;
+  } else {
+    topbar.classList.remove('flash');
+    alertActive = false;
+  }
+}
+
+function playBeep(freq, duration) {
+  ensureAudioCtx();
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'square';  // square wave is louder/more audible than sine
+  osc.frequency.value = freq || 800;
+  gain.gain.value = alertVolume;
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (duration || 0.25));
+  osc.stop(audioCtx.currentTime + (duration || 0.25));
+}
+
+function playCountdownBeep(final) {
+  ensureAudioCtx();
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'sine';
+  osc.frequency.value = final ? 1200 : 600;
+  gain.gain.value = 0.5;
+  const dur = final ? 0.4 : 0.15;
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.stop(audioCtx.currentTime + dur);
+}
+
+function toggleMute() {
+  alertMuted = !alertMuted;
+  const btn = document.getElementById('mute-btn');
+  btn.textContent = alertMuted ? '\u{1f507}' : '\u{1f50a}';
+  btn.classList.toggle('muted', alertMuted);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Display Update
+// ═══════════════════════════════════════════════════════════
+
+function updateDisplay(data) {
+  latestData = data;
+  const newRows = data.rows || ROWS;
+  const newCols = data.cols || COLS;
+  if (newRows !== ROWS || newCols !== COLS) { ROWS = newRows; COLS = newCols; resizeCanvas(); }
+  overlay.style.display = data.calibrating ? 'flex' : 'none';
+
+  // Accumulate spine trail during scan
+  if (spineScanActive && spineTrailGrid && data.grid) {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
+        if (v > spineTrailGrid[r][c]) spineTrailGrid[r][c] = v;
+      }
+    }
+  }
+
+  drawGrid(data);
+  document.getElementById('main-hz').textContent = data.hz.toFixed(1) + ' Hz';
+  updateNearestVertebra(data);
+  if (sessionActive) updateGraph(data);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Nearest Vertebra
+// ═══════════════════════════════════════════════════════════
+
+function updateNearestVertebra(data) {
+  const el = document.getElementById('nearest-label');
+  const markers = data.spine_markers;
+
+  // Enable/disable L* exercises based on calibration
+  const sel = document.getElementById('exercise-select');
+  const hasCalibration = markers && Object.keys(markers).length > 0;
+  for (let i = 0; i < sel.options.length; i++) {
+    const opt = sel.options[i];
+    if (opt.value !== 'Free Flow') {
+      const target = opt.value.split(' ')[0]; // "L4"
+      opt.disabled = !hasCalibration || !markers[target];
+    }
+  }
+
+  if (!markers || Object.keys(markers).length === 0) { el.style.display = 'none'; return; }
+
+  let peakVal = 0, peakR = 0, peakC = 0;
+  const grid = data.grid;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r] ? (grid[r][c] || 0) : 0;
+      if (v > peakVal) { peakVal = v; peakR = r; peakC = c; }
+    }
+  if (peakVal === 0) { el.style.display = 'none'; return; }
+
+  let nearest = '', minDist = Infinity;
+  for (const [label, [mr, mc]] of Object.entries(markers)) {
+    const d = Math.sqrt((peakR - mr) ** 2 + (peakC - mc) ** 2);
+    if (d < minDist) { minDist = d; nearest = label; }
+  }
+  el.style.display = 'inline';
+  el.textContent = `Peak near: ${nearest} — ADC: ${peakVal}`;
+  if (graphTracking === 'auto') { graphCurrentLabel = nearest; updateTrackingLabel(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Mode & Controls
+// ═══════════════════════════════════════════════════════════
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-filtered').className = 'btn btn-sm' + (m === 'filtered' ? ' active' : '');
+  document.getElementById('btn-raw').className = 'btn btn-sm' + (m === 'raw' ? ' active' : '');
+  if (latestData) drawGrid(latestData);
+}
+
+function doCalibrate() {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ action: 'calibrate' }));
+}
+
+function setNoiseFloor(val) {
+  document.getElementById('nf-val').textContent = val;
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ action: 'set_noise_floor', value: parseInt(val) }));
+}
+
+// ═══════════════════════════════════════════════════════════
+// Countdown + Session Recording
+// ═══════════════════════════════════════════════════════════
+
+async function toggleSession() {
+  if (!sessionActive) {
+    // Countdown first
+    if (countdownDelay > 0) {
+      const proceed = await runCountdown(countdownDelay);
+      if (!proceed) return;  // cancelled
+    }
+    // Actually start
+    const exercise = document.getElementById('exercise-select').value;
+    await pywebview.api.start_session(exercise);
+    sessionActive = true;
+    sessionStart = Date.now();
+    document.getElementById('session-btn').textContent = 'Stop Session';
+    document.getElementById('session-btn').className = 'btn btn-danger btn-sm';
+    document.getElementById('session-badge').textContent = 'Recording';
+    document.getElementById('session-badge').className = 'session-badge badge-recording';
+    document.getElementById('exercise-select').disabled = true;
+    document.getElementById('graph-wrapper').style.display = 'block';
+    document.getElementById('graph-controls').style.display = 'flex';
+    // Resize heatmap first (now smaller due to graph), then graph
+    setTimeout(() => { resizeCanvas(); resizeGraph(); }, 50);
+    resetGraph();
+    timerInterval = setInterval(updateTimer, 200);
+  } else {
+    // Stop
+    sessionActive = false;
+    clearInterval(timerInterval);
+    document.getElementById('session-btn').textContent = 'Start Session';
+    document.getElementById('session-btn').className = 'btn btn-success btn-sm';
+    document.getElementById('session-badge').textContent = 'Stopped';
+    document.getElementById('session-badge').className = 'session-badge badge-stopped';
+    document.getElementById('exercise-select').disabled = false;
+    document.getElementById('graph-wrapper').style.display = 'none';
+    document.getElementById('graph-controls').style.display = 'none';
+    // Resize heatmap back to full height
+    setTimeout(() => resizeCanvas(), 50);
+    const result = await pywebview.api.stop_session();
+    showResults(result);
+  }
+}
+
+function runCountdown(seconds) {
+  return new Promise((resolve) => {
+    const cdOverlay = document.getElementById('countdown-overlay');
+    const cdNumber = document.getElementById('countdown-number');
+    cdOverlay.style.display = 'flex';
+    let remaining = seconds;
+
+    function tick() {
+      if (remaining > 0) {
+        cdNumber.className = 'countdown-number';
+        cdNumber.textContent = remaining;
+        playCountdownBeep(false);
+        remaining--;
+        setTimeout(tick, 1000);
+      } else {
+        // GO!
+        cdNumber.className = 'countdown-go';
+        cdNumber.textContent = 'GO!';
+        playCountdownBeep(true);
+        setTimeout(() => {
+          cdOverlay.style.display = 'none';
+          resolve(true);
+        }, 500);
+      }
+    }
+    tick();
+  });
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('session-timer').textContent = `${mm}:${ss}`;
+}
+
+function showResults(result) {
+  const stats = document.getElementById('results-stats');
+  const forceRow = result.force_csv
+    ? `<div><span class="label">Force CSV</span><span><span class="results-check">&#10003;</span>Saved</span></div>`
+    : '';
+  stats.innerHTML = `
+    <div><span class="label">Duration</span><span>${result.duration} s</span></div>
+    <div><span class="label">Frames</span><span>${result.frame_count}</span></div>
+    <div><span class="label">Avg Rate</span><span>${result.avg_hz} Hz</span></div>
+    <div><span class="label">Raw CSV</span><span><span class="results-check">&#10003;</span>${result.raw_csv ? 'Saved' : 'None'}</span></div>
+    <div><span class="label">Filtered CSV</span><span><span class="results-check">&#10003;</span>${result.filtered_csv ? 'Saved' : 'None'}</span></div>
+    ${forceRow}
+  `;
+  document.getElementById('results-overlay').style.display = 'flex';
+}
+
+function closeResults() {
+  document.getElementById('results-overlay').style.display = 'none';
+  document.getElementById('session-badge').textContent = 'Idle';
+  document.getElementById('session-badge').className = 'session-badge badge-idle';
+  document.getElementById('session-timer').textContent = '00:00';
+}
+
+async function openRecordings() { await pywebview.api.open_recordings_folder(); }
+
+// ═══════════════════════════════════════════════════════════
+// Spine Calibration — drag-scan with auto-detection
+// ═══════════════════════════════════════════════════════════
+
+// Trail: persistent max-value grid accumulated during scan
+let spineScanActive = false;
+let spineTrailGrid = null;  // [ROWS][COLS] max filtered values
+let spineDetectedPeaks = null;  // [{row, col, val, label}, ...]
+const SPINE_SCAN_DURATION = 8;  // seconds
+
+// Minimum spacing between vertebrae in grid cells
+// Real lumbar spacing ~30mm. Row pitch=4mm, col pitch=5mm.
+// Conservative min: 5 cells Euclidean distance (~20-25mm)
+const SPINE_MIN_SPACING = 5;
+
+function openSpineCalibration() {
+  spineTrailGrid = null;
+  spineDetectedPeaks = null;
+  spineScanActive = false;
+  document.getElementById('spine-modal').style.display = 'flex';
+  document.getElementById('spine-start-btn').style.display = '';
+  document.getElementById('spine-confirm-btn').style.display = 'none';
+  document.getElementById('spine-restart-btn').style.display = 'none';
+  document.getElementById('spine-instruction').innerHTML =
+    'Lie face-up on the mat and slowly roll/drag along your spine.<br>' +
+    'The heatmap will show a persistent trail of your movement.<br>' +
+    'The 5 strongest points will be auto-detected as L1–L5.';
+  document.getElementById('spine-progress').innerHTML = '';
+  document.getElementById('spine-result').textContent = '';
+}
+
+async function startSpineScan() {
+  const btn = document.getElementById('spine-start-btn');
+  btn.style.display = 'none';
+
+  // Initialize trail grid
+  spineTrailGrid = Array.from({length: ROWS}, () => new Float64Array(COLS));
+
+  // Countdown
+  document.getElementById('spine-instruction').textContent = 'Get ready...';
+  await runCountdown(3);
+
+  // Start scanning
+  spineScanActive = true;
+  document.getElementById('spine-instruction').textContent = 'Scanning... slowly roll along your spine';
+  document.getElementById('spine-result').textContent = '';
+
+  // Timer for scan duration
+  let remaining = SPINE_SCAN_DURATION;
+  const progressEl = document.getElementById('spine-progress');
+  const tickInterval = setInterval(() => {
+    remaining--;
+    progressEl.innerHTML = `<span style="font-size:24px;font-weight:700;color:var(--accent)">${remaining}s</span>`;
+    if (remaining <= 0) {
+      clearInterval(tickInterval);
+      finishSpineScan();
+    }
+  }, 1000);
+  progressEl.innerHTML = `<span style="font-size:24px;font-weight:700;color:var(--accent)">${remaining}s</span>`;
+}
+
+function finishSpineScan() {
+  spineScanActive = false;
+  playCountdownBeep(true);
+
+  // Auto-detect 5 peaks with spacing constraints
+  spineDetectedPeaks = detectVertebraePeaks(spineTrailGrid, 5, SPINE_MIN_SPACING);
+
+  if (spineDetectedPeaks.length < 2) {
+    document.getElementById('spine-instruction').textContent =
+      'Not enough pressure points detected. Try again — press more firmly and move slower.';
+    document.getElementById('spine-start-btn').style.display = '';
+    document.getElementById('spine-progress').innerHTML = '';
+    return;
+  }
+
+  // Temporarily set spine_markers on the live data so drawGrid renders the overlay
+  spinePreviewMarkers = {};
+  for (const p of spineDetectedPeaks) {
+    spinePreviewMarkers[p.label] = [p.row, p.col];
+  }
+
+  // Hide modal, show preview bar so user can see heatmap with trail + detected dots
+  document.getElementById('spine-modal').style.display = 'none';
+  const bar = document.getElementById('spine-preview-bar');
+  bar.style.display = 'flex';
+  document.getElementById('spine-preview-text').textContent =
+    'Detected: ' + spineDetectedPeaks.map(p => p.label).join(', ') +
+    ' — Review the orange dots on the heatmap, then Accept or Redo.';
+
+  // Force a redraw with the trail + peaks visible
+  if (latestData) drawGrid(latestData);
+}
+
+function detectVertebraePeaks(trail, count, minDist) {
+  // ── Clustering-based vertebra detection ──
+  // The trail is a linear band of pressure with natural gaps between vertebrae.
+  // Phase 1: Connected-component clustering at adaptive threshold
+  // Phase 2: Fallback to peak-seeded Voronoi if trail is too continuous
+
+  let maxVal = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (trail[r][c] > maxVal) maxVal = trail[r][c];
+  if (maxVal <= 0) return [];
+
+  // Phase 1: Try progressively lower thresholds until we get >= count clusters
+  const MIN_CLUSTER_CELLS = 3;  // ignore clusters smaller than this (noise)
+  let bestClusters = [];
+  for (let threshPct = 0.45; threshPct >= 0.15; threshPct -= 0.05) {
+    const clusters = findPressureClusters(trail, maxVal * threshPct);
+    const valid = clusters.filter(c => c.count >= MIN_CLUSTER_CELLS);
+    if (valid.length >= count) { bestClusters = valid; break; }
+    if (valid.length > bestClusters.length) bestClusters = valid;
+  }
+
+  // Phase 2: If not enough natural clusters, the trail is too continuous.
+  // Use greedy peak selection as seeds, then assign cells via nearest-seed
+  // (Voronoi) and compute weighted centroids per region.
+  if (bestClusters.length < count) {
+    bestClusters = peakSeededClustering(trail, count, minDist, maxVal * 0.15);
+  }
+
+  // Take top `count` by total weight (sum of pressure in cluster)
+  bestClusters.sort((a, b) => b.weight - a.weight);
+  let picked = bestClusters.slice(0, count);
+
+  // Sort by col DESCENDING: Col 29 = top of mat = L1 (most superior)
+  picked.sort((a, b) => b.col - a.col);
+
+  const labels = ['L1', 'L2', 'L3', 'L4', 'L5'];
+  return picked.map((p, i) => ({
+    row: Math.round(p.row),
+    col: Math.round(p.col),
+    val: Math.round(p.maxVal),
+    label: labels[i] || `L${i + 1}`,
+  }));
+}
+
+// Connected-component flood fill with 4-connectivity (preserves gaps)
+// Returns [{row, col (weighted centroid), weight, count, maxVal}, ...]
+function findPressureClusters(trail, threshold) {
+  const visited = Array.from({length: ROWS}, () => new Uint8Array(COLS));
+  const clusters = [];
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (visited[r][c] || trail[r][c] < threshold) continue;
+      // BFS flood fill — 4-connectivity so diagonal gaps separate clusters
+      const queue = [[r, c]];
+      visited[r][c] = 1;
+      let sumR = 0, sumC = 0, sumW = 0, cellCount = 0, peak = 0;
+      while (queue.length > 0) {
+        const [cr, cc] = queue.shift();
+        const w = trail[cr][cc];
+        sumR += cr * w;
+        sumC += cc * w;
+        sumW += w;
+        cellCount++;
+        if (w > peak) peak = w;
+        for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+          const nr = cr + dr, nc = cc + dc;
+          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS
+              && !visited[nr][nc] && trail[nr][nc] >= threshold) {
+            visited[nr][nc] = 1;
+            queue.push([nr, nc]);
+          }
+        }
+      }
+      clusters.push({
+        row: sumR / sumW,   // pressure-weighted centroid
+        col: sumC / sumW,
+        weight: sumW,
+        count: cellCount,
+        maxVal: peak,
+      });
+    }
+  }
+  return clusters;
+}
+
+// Fallback: greedy peak selection → Voronoi assignment → weighted centroids
+function peakSeededClustering(trail, count, minDist, threshold) {
+  // 1. Build candidate list above threshold, sorted by pressure descending
+  const candidates = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (trail[r][c] >= threshold)
+        candidates.push({row: r, col: c, val: trail[r][c]});
+  candidates.sort((a, b) => b.val - a.val);
+
+  // 2. Greedy pick seeds with minimum spacing
+  const seeds = [];
+  for (const cand of candidates) {
+    if (seeds.length >= count) break;
+    let tooClose = false;
+    for (const s of seeds) {
+      const dr = (cand.row - s.row) * 4;  // mm
+      const dc = (cand.col - s.col) * 5;  // mm
+      if (Math.sqrt(dr * dr + dc * dc) < minDist * 4) { tooClose = true; break; }
+    }
+    if (!tooClose) seeds.push(cand);
+  }
+  if (seeds.length === 0) return [];
+
+  // 3. Assign each above-threshold cell to nearest seed (Voronoi), compute centroids
+  const accum = seeds.map(() => ({sumR: 0, sumC: 0, sumW: 0, count: 0, maxVal: 0}));
+  for (const cand of candidates) {
+    let bestIdx = 0, bestDist = Infinity;
+    for (let i = 0; i < seeds.length; i++) {
+      const dr = (cand.row - seeds[i].row) * 4;
+      const dc = (cand.col - seeds[i].col) * 5;
+      const d = dr * dr + dc * dc;
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    const a = accum[bestIdx];
+    a.sumR += cand.row * cand.val;
+    a.sumC += cand.col * cand.val;
+    a.sumW += cand.val;
+    a.count++;
+    if (cand.val > a.maxVal) a.maxVal = cand.val;
+  }
+
+  return accum
+    .filter(a => a.sumW > 0)
+    .map(a => ({
+      row: a.sumR / a.sumW,
+      col: a.sumC / a.sumW,
+      weight: a.sumW,
+      count: a.count,
+      maxVal: a.maxVal,
+    }));
+}
+
+async function acceptSpinePreview() {
+  if (!spineDetectedPeaks) return;
+  const markers = {};
+  for (const p of spineDetectedPeaks) {
+    markers[p.label] = [p.row, p.col];
+  }
+  await pywebview.api.set_spine_markers(markers);
+  // Clean up preview state
+  spineTrailGrid = null;
+  spineDetectedPeaks = null;
+  spinePreviewMarkers = null;
+  document.getElementById('spine-preview-bar').style.display = 'none';
+}
+
+function redoSpinePreview() {
+  spineTrailGrid = null;
+  spineDetectedPeaks = null;
+  spinePreviewMarkers = null;
+  document.getElementById('spine-preview-bar').style.display = 'none';
+  pywebview.api.clear_calibration();
+  openSpineCalibration();
+}
+
+// Legacy — kept for modal confirm/cancel buttons
+async function confirmSpine() { await acceptSpinePreview(); }
+function restartSpine() { redoSpinePreview(); }
+
+function cancelSpine() {
+  spineScanActive = false;
+  spineTrailGrid = null;
+  spineDetectedPeaks = null;
+  spinePreviewMarkers = null;
+  document.getElementById('spine-modal').style.display = 'none';
+  document.getElementById('spine-preview-bar').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// Time-Series Graph — with colored background zones
+// ═══════════════════════════════════════════════════════════
+
+function resizeGraph() {
+  const wrapper = document.getElementById('graph-wrapper');
+  graphCanvas.width = wrapper.clientWidth || 1100;
+  graphCanvas.height = wrapper.clientHeight || 170;
+}
+
+function resetGraph() {
+  graphBuffer = new Float64Array(GRAPH_MAX_SAMPLES);
+  graphHead = 0; graphCount = 0;
+}
+
+function updateGraph(data) {
+  let trackVal = 0;
+  const markers = data.spine_markers || {};
+  const exercise = document.getElementById('exercise-select').value;
+
+  // Determine what to track based on exercise mode
+  if (exercise === 'Free Flow') {
+    // Track global peak (highest value anywhere on mat)
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) {
+        const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
+        if (v > trackVal) trackVal = v;
+      }
+    graphCurrentLabel = 'Peak';
+  } else {
+    // L* Mobilization — track that specific vertebra's region
+    const target = exercise.split(' ')[0];  // "L4"
+    if (markers[target]) {
+      const [tr, tc] = markers[target];
+      // Peak within +-3 cells of target vertebra
+      const margin = 3;
+      for (let r = Math.max(0, tr - margin); r <= Math.min(ROWS - 1, tr + margin); r++) {
+        for (let c = Math.max(0, tc - margin); c <= Math.min(COLS - 1, tc + margin); c++) {
+          const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
+          if (v > trackVal) trackVal = v;
+        }
+      }
+      graphCurrentLabel = target;
+    } else {
+      // Fallback: no calibration, track global peak
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++) {
+          const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
+          if (v > trackVal) trackVal = v;
+        }
+      graphCurrentLabel = 'Peak';
+    }
+  }
+
+  // Override with pinned tracking
+  if (graphTracking !== 'auto' && markers[graphTracking]) {
+    const [r, c] = markers[graphTracking];
+    trackVal = data.grid[r] ? (data.grid[r][c] || 0) : 0;
+    graphCurrentLabel = graphTracking;
+  }
+
+  graphBuffer[graphHead] = trackVal;
+  graphHead = (graphHead + 1) % GRAPH_MAX_SAMPLES;
+  if (graphCount < GRAPH_MAX_SAMPLES) graphCount++;
+  updateTrackingLabel();
+  drawGraph();
+}
+
+function drawGraph() {
+  const w = graphCanvas.width;
+  const h = graphCanvas.height;
+  const pad = { top: 8, right: 10, bottom: 20, left: 46 };
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  graphCtx.clearRect(0, 0, w, h);
+  graphCtx.fillStyle = '#141428';
+  graphCtx.fillRect(0, 0, w, h);
+
+  // Background threshold zones (colored bands)
+  const yForVal = (v) => {
+    const norm = v / 4095;
+    return graphMode === 'displacement'
+      ? pad.top + norm * plotH
+      : pad.top + plotH - norm * plotH;
+  };
+
+  // Green zone: 0 to threshLow
+  const greenY1 = yForVal(0);
+  const greenY2 = yForVal(threshLow);
+  const greenTop = Math.min(greenY1, greenY2);
+  const greenH = Math.abs(greenY2 - greenY1);
+  graphCtx.fillStyle = 'rgba(40, 167, 69, 0.12)';
+  graphCtx.fillRect(pad.left, greenTop, plotW, greenH);
+
+  // Yellow zone: threshLow to threshHigh
+  const yellowY1 = yForVal(threshLow);
+  const yellowY2 = yForVal(threshHigh);
+  const yellowTop = Math.min(yellowY1, yellowY2);
+  const yellowH = Math.abs(yellowY2 - yellowY1);
+  graphCtx.fillStyle = 'rgba(255, 193, 7, 0.12)';
+  graphCtx.fillRect(pad.left, yellowTop, plotW, yellowH);
+
+  // Red zone: threshHigh to 4095
+  const redY1 = yForVal(threshHigh);
+  const redY2 = yForVal(4095);
+  const redTop = Math.min(redY1, redY2);
+  const redH = Math.abs(redY2 - redY1);
+  graphCtx.fillStyle = 'rgba(220, 53, 69, 0.15)';
+  graphCtx.fillRect(pad.left, redTop, plotW, redH);
+
+  // Grid lines
+  graphCtx.strokeStyle = '#222';
+  graphCtx.lineWidth = 1;
+  for (let v = 0; v <= 4095; v += 1000) {
+    const gy = yForVal(v);
+    graphCtx.beginPath();
+    graphCtx.moveTo(pad.left, gy);
+    graphCtx.lineTo(pad.left + plotW, gy);
+    graphCtx.stroke();
+    graphCtx.fillStyle = '#555';
+    graphCtx.font = '10px monospace';
+    graphCtx.textAlign = 'right';
+    graphCtx.textBaseline = 'middle';
+    graphCtx.fillText(v, pad.left - 4, gy);
+  }
+
+  // Threshold boundary lines (subtle)
+  graphCtx.strokeStyle = 'rgba(255,193,7,0.4)';
+  graphCtx.lineWidth = 1;
+  graphCtx.beginPath();
+  graphCtx.moveTo(pad.left, yForVal(threshLow));
+  graphCtx.lineTo(pad.left + plotW, yForVal(threshLow));
+  graphCtx.stroke();
+
+  graphCtx.strokeStyle = 'rgba(220,53,69,0.5)';
+  graphCtx.beginPath();
+  graphCtx.moveTo(pad.left, yForVal(threshHigh));
+  graphCtx.lineTo(pad.left + plotW, yForVal(threshHigh));
+  graphCtx.stroke();
+
+  if (graphCount < 2) return;
+
+  const maxSamples = Math.min(graphCount, Math.floor(plotW / 2));
+  const startIdx = graphCount > maxSamples
+    ? (graphHead - maxSamples + GRAPH_MAX_SAMPLES) % GRAPH_MAX_SAMPLES
+    : (graphHead - graphCount + GRAPH_MAX_SAMPLES) % GRAPH_MAX_SAMPLES;
+
+  // Draw line
+  graphCtx.beginPath();
+  for (let i = 0; i < maxSamples; i++) {
+    const idx = (startIdx + i) % GRAPH_MAX_SAMPLES;
+    const val = graphBuffer[idx];
+    const x = pad.left + (i / (maxSamples - 1)) * plotW;
+    const y = yForVal(val);
+    if (i === 0) graphCtx.moveTo(x, y);
+    else graphCtx.lineTo(x, y);
+  }
+  graphCtx.strokeStyle = '#4a90d9';
+  graphCtx.lineWidth = 2;
+  graphCtx.stroke();
+
+  // X label
+  graphCtx.fillStyle = '#555';
+  graphCtx.font = '10px sans-serif';
+  graphCtx.textAlign = 'center';
+  graphCtx.fillText('Time (scrolling)', pad.left + plotW / 2, h - 3);
+}
+
+function setGraphMode(m) {
+  graphMode = m;
+  document.getElementById('btn-amplitude').className = 'btn btn-sm' + (m === 'amplitude' ? ' active' : '');
+  document.getElementById('btn-displacement').className = 'btn btn-sm' + (m === 'displacement' ? ' active' : '');
+  document.getElementById('displacement-note').style.display = m === 'displacement' ? 'inline' : 'none';
+  drawGraph();
+}
+
+function updateTrackingLabel() {
+  const pinned = graphTracking !== 'auto';
+  const label = pinned ? graphTracking : graphCurrentLabel;
+  document.getElementById('tracking-label').textContent = `Tracking: ${label} (${pinned ? 'pinned' : 'auto'})`;
+}
+
+document.getElementById('tracking-label').addEventListener('click', () => {
+  const markers = latestData && latestData.spine_markers ? Object.keys(latestData.spine_markers).sort() : [];
+  if (markers.length === 0) return;
+  if (graphTracking === 'auto') graphTracking = markers[0];
+  else {
+    const idx = markers.indexOf(graphTracking);
+    graphTracking = (idx < 0 || idx >= markers.length - 1) ? 'auto' : markers[idx + 1];
+  }
+  updateTrackingLabel();
+});
+
+// ═══════════════════════════════════════════════════════════
+// Settings Modal
+// ═══════════════════════════════════════════════════════════
+
+async function openSettings() {
+  document.getElementById('set-cell-display').value = cellDisplayMode;
+  document.getElementById('set-countdown').value = countdownDelay;
+  document.getElementById('set-noise-floor').value = parseInt(document.getElementById('nf-val').textContent);
+  document.getElementById('set-nf-val').textContent = document.getElementById('nf-val').textContent;
+  document.getElementById('set-alert-volume').value = Math.round(alertVolume * 100);
+  document.getElementById('set-vol-val').textContent = Math.round(alertVolume * 100);
+  document.getElementById('set-thresh-high').value = threshHigh;
+  document.getElementById('set-thresh-low').value = threshLow;
+  document.getElementById('set-spine-overlay').checked = showSpineOverlay;
+  document.getElementById('set-axis-labels').checked = showAxisLabels;
+  document.getElementById('settings-modal').style.display = 'flex';
+  // Update force calibration status
+  try {
+    const calData = await pywebview.api.load_force_calibration_data();
+    if (calData) {
+      document.getElementById('set-force-status').textContent =
+        `Calibrated: ${calData.weight_grams}g, ${calData.reference_points.length} points`;
+      document.getElementById('set-force-status').style.color = 'var(--success)';
+      document.getElementById('set-force-clear-btn').style.display = '';
+    } else {
+      document.getElementById('set-force-status').textContent = 'Not calibrated';
+      document.getElementById('set-force-status').style.color = 'var(--text-dim)';
+      document.getElementById('set-force-clear-btn').style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function clearForceCalUI() {
+  await pywebview.api.clear_force_calibration();
+  forceGainMap = null;
+  forceCalEnabled = false;
+  document.getElementById('force-cal-toggle').checked = false;
+  document.getElementById('set-force-status').textContent = 'Not calibrated';
+  document.getElementById('set-force-status').style.color = 'var(--text-dim)';
+  document.getElementById('set-force-clear-btn').style.display = 'none';
+}
+
+async function saveSettingsUI() {
+  cellDisplayMode = document.getElementById('set-cell-display').value;
+  countdownDelay = parseInt(document.getElementById('set-countdown').value) || 0;
+  const nf = parseInt(document.getElementById('set-noise-floor').value);
+  alertVolume = parseInt(document.getElementById('set-alert-volume').value) / 100;
+  threshHigh = parseInt(document.getElementById('set-thresh-high').value) || 2500;
+  threshLow = parseInt(document.getElementById('set-thresh-low').value) || 1000;
+  showSpineOverlay = document.getElementById('set-spine-overlay').checked;
+  document.getElementById('spine-overlay-toggle').checked = showSpineOverlay;
+  showAxisLabels = document.getElementById('set-axis-labels').checked;
+
+  // Apply noise floor
+  document.getElementById('noise-slider').value = nf;
+  document.getElementById('nf-val').textContent = nf;
+  setNoiseFloor(nf);
+
+  // Resize canvas in case axis labels toggled
+  resizeCanvas();
+
+  // Save to backend
+  try {
+    await pywebview.api.save_settings({
+      noise_floor: nf,
+      cell_display: cellDisplayMode,
+      countdown_delay: countdownDelay,
+      alert_volume: Math.round(alertVolume * 100),
+      thresh_low: threshLow,
+      thresh_high: threshHigh,
+      show_spine_overlay: showSpineOverlay,
+      show_axis_labels: showAxisLabels,
+      force_cal_enabled: forceCalEnabled,
+    });
+  } catch(e) {}
+
+  document.getElementById('settings-modal').style.display = 'none';
+  if (latestData) drawGrid(latestData);
+}
+
+function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
+
+// ═══════════════════════════════════════════════════════════
+// Tooltip
+// ═══════════════════════════════════════════════════════════
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!latestData) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const sx = Math.floor((mx - LABEL_W) / cellW);
+  const sy = Math.floor((my - LABEL_H) / cellH);
+  if (sx >= 0 && sx < ROWS && sy >= 0 && sy < COLS) {
+    const row = ROWS - 1 - sx;
+    const col = COLS - 1 - sy;
+    const grid = mode === 'raw' ? latestData.raw : latestData.grid;
+    const val = grid[row] ? (grid[row][col] || 0) : 0;
+    const bl = latestData.baseline[row] ? (latestData.baseline[row][col] || 0) : 0;
+    const forceStr = cellDisplayMode === 'force' ? ` (~${adcToForce(val, row, col)}N)` : '';
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY - 10) + 'px';
+    tooltip.textContent = `R${row} C${col}: ${val}${forceStr} (base: ${bl})`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+// ═══════════════════════════════════════════════════════════
+// Force Calibration Wizard
+// ═══════════════════════════════════════════════════════════
+
+const FORCE_CAL_STEPS = [
+  { name: 'center', label: 'CENTER', instruction: 'Place the weight in the CENTER of the mat, then click Capture.' },
+  { name: 'top-left', label: 'TL', instruction: 'Place the weight in the TOP-LEFT corner of the mat, then click Capture.' },
+  { name: 'top-right', label: 'TR', instruction: 'Place the weight in the TOP-RIGHT corner of the mat, then click Capture.' },
+  { name: 'bottom-left', label: 'BL', instruction: 'Place the weight in the BOTTOM-LEFT corner of the mat, then click Capture.' },
+  { name: 'bottom-right', label: 'BR', instruction: 'Place the weight in the BOTTOM-RIGHT corner of the mat, then click Capture.' },
+];
+
+let forceCalStep = 0;
+let forceCalResults = [];  // [{name, row, col, peak_adc, frames}, ...]
+
+function openForceCalibration() {
+  forceCalStep = 0;
+  forceCalResults = [];
+  document.getElementById('force-cal-modal').style.display = 'flex';
+  document.getElementById('force-weight-section').style.display = 'flex';
+  document.getElementById('force-start-btn').style.display = '';
+  document.getElementById('force-capture-btn').style.display = 'none';
+  document.getElementById('force-accept-btn').style.display = 'none';
+  document.getElementById('force-redo-btn').style.display = 'none';
+  document.getElementById('force-progress').innerHTML = '';
+  document.getElementById('force-result').textContent = '';
+  document.getElementById('force-summary').style.display = 'none';
+  document.getElementById('force-cal-title').textContent = 'Force Calibration';
+  document.getElementById('force-instruction').innerHTML =
+    'Calibrate force readings using a known weight.<br>Place the weight at 5 positions (center + 4 corners).';
+  updateForceWeightDisplay();
+}
+
+function updateForceWeightDisplay() {
+  const grams = parseFloat(document.getElementById('force-weight-input').value) || 300;
+  const newtons = (grams / 1000.0) * 9.81;
+  document.getElementById('force-weight-newtons').textContent = `(= ${newtons.toFixed(3)} N)`;
+}
+// Live update
+document.getElementById('force-weight-input').addEventListener('input', updateForceWeightDisplay);
+
+function startForceCalibration() {
+  forceCalStep = 0;
+  forceCalResults = [];
+  document.getElementById('force-weight-section').style.display = 'none';
+  document.getElementById('force-start-btn').style.display = 'none';
+  document.getElementById('force-capture-btn').style.display = '';
+  showForceStep();
+}
+
+function showForceStep() {
+  const step = FORCE_CAL_STEPS[forceCalStep];
+  document.getElementById('force-instruction').textContent = step.instruction;
+  document.getElementById('force-result').textContent = '';
+  document.getElementById('force-capture-btn').disabled = false;
+  document.getElementById('force-capture-btn').textContent = 'Capture';
+
+  // Build progress dots
+  let html = '';
+  for (let i = 0; i < FORCE_CAL_STEPS.length; i++) {
+    const s = FORCE_CAL_STEPS[i];
+    let cls = 'force-dot';
+    if (i < forceCalStep) cls += ' done';
+    else if (i === forceCalStep) cls += ' active';
+    html += `<div class="force-step"><div class="${cls}">${i < forceCalStep ? '&#10003;' : ''}</div><span>${s.label}</span></div>`;
+  }
+  document.getElementById('force-progress').innerHTML = html;
+}
+
+async function captureForcePoint() {
+  const btn = document.getElementById('force-capture-btn');
+  btn.disabled = true;
+  btn.textContent = 'Capturing...';
+  document.getElementById('force-result').textContent = 'Capturing for 2 seconds...';
+
+  await pywebview.api.start_force_capture();
+  const result = await pywebview.api.stop_force_capture();
+
+  if (!result || result.peak_adc <= 0) {
+    document.getElementById('force-result').textContent = 'No pressure detected. Make sure weight is on the mat.';
+    btn.disabled = false;
+    btn.textContent = 'Retry';
+    return;
+  }
+
+  const step = FORCE_CAL_STEPS[forceCalStep];
+  forceCalResults.push({
+    name: step.name,
+    row: result.row,
+    col: result.col,
+    peak_adc: result.peak_adc,
+    frames: result.frames,
+  });
+
+  document.getElementById('force-result').textContent =
+    `Peak ADC: ${result.peak_adc} at R${result.row} C${result.col} (${result.frames} frames)`;
+
+  forceCalStep++;
+
+  if (forceCalStep >= FORCE_CAL_STEPS.length) {
+    // All done — show summary
+    setTimeout(showForceSummary, 800);
+  } else {
+    // Next step after brief delay
+    setTimeout(showForceStep, 800);
+  }
+}
+
+function showForceSummary() {
+  const grams = parseFloat(document.getElementById('force-weight-input').value) || 300;
+  const newtons = (grams / 1000.0) * 9.81;
+
+  document.getElementById('force-capture-btn').style.display = 'none';
+  document.getElementById('force-accept-btn').style.display = '';
+  document.getElementById('force-redo-btn').style.display = '';
+  document.getElementById('force-instruction').textContent = 'Calibration complete! Review the results:';
+
+  // Update progress dots all done
+  let html = '';
+  for (let i = 0; i < FORCE_CAL_STEPS.length; i++) {
+    html += `<div class="force-step"><div class="force-dot done">&#10003;</div><span>${FORCE_CAL_STEPS[i].label}</span></div>`;
+  }
+  document.getElementById('force-progress').innerHTML = html;
+
+  // Summary table
+  let summaryHtml = `<div><span class="label">Weight</span><span>${grams}g (${newtons.toFixed(3)} N)</span></div>`;
+  for (const r of forceCalResults) {
+    summaryHtml += `<div><span class="label">${r.name}</span><span>ADC ${r.peak_adc} @ R${r.row} C${r.col}</span></div>`;
+  }
+  document.getElementById('force-summary').innerHTML = summaryHtml;
+  document.getElementById('force-summary').style.display = 'block';
+  document.getElementById('force-result').textContent = '';
+}
+
+async function acceptForceCalibration() {
+  const grams = parseFloat(document.getElementById('force-weight-input').value) || 300;
+  document.getElementById('force-accept-btn').disabled = true;
+  document.getElementById('force-accept-btn').textContent = 'Computing...';
+
+  const gainMap = await pywebview.api.compute_force_calibration(grams, forceCalResults);
+  if (gainMap) {
+    forceGainMap = gainMap;
+    forceCalEnabled = true;
+    document.getElementById('force-cal-toggle').checked = true;
+  }
+
+  document.getElementById('force-cal-modal').style.display = 'none';
+  document.getElementById('force-accept-btn').disabled = false;
+  document.getElementById('force-accept-btn').textContent = 'Accept';
+
+  // Save the enabled state
+  try {
+    const settings = await pywebview.api.get_settings();
+    settings.force_cal_enabled = forceCalEnabled;
+    await pywebview.api.save_settings(settings);
+  } catch(e) {}
+
+  if (latestData) drawGrid(latestData);
+}
+
+function redoForceCalibration() {
+  forceCalStep = 0;
+  forceCalResults = [];
+  document.getElementById('force-weight-section').style.display = 'flex';
+  document.getElementById('force-start-btn').style.display = '';
+  document.getElementById('force-capture-btn').style.display = 'none';
+  document.getElementById('force-accept-btn').style.display = 'none';
+  document.getElementById('force-redo-btn').style.display = 'none';
+  document.getElementById('force-progress').innerHTML = '';
+  document.getElementById('force-result').textContent = '';
+  document.getElementById('force-summary').style.display = 'none';
+  document.getElementById('force-instruction').innerHTML =
+    'Calibrate force readings using a known weight.<br>Place the weight at 5 positions (center + 4 corners).';
+}
+
+function cancelForceCalibration() {
+  document.getElementById('force-cal-modal').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════════════
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  if (latestData) drawGrid(latestData);
+  if (sessionActive) resizeGraph();
+});
+
+window.addEventListener('pywebviewready', () => { refreshPorts(); });
+(function waitForApi() {
+  if (window.pywebview && window.pywebview.api) refreshPorts();
+  else setTimeout(waitForApi, 300);
+})();
+</script>
+</body>
+</html>

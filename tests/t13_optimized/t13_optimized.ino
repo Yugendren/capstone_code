@@ -3,18 +3,21 @@
  *
  * Same hardware as t12 (5x 595, 2x MUX, 40x30).
  * Performance optimizations:
- *   1. Direct GPIO register writes for MUX select (instead of digitalWrite)
- *   2. Reduced ADC settling time (tuned)
- *   3. Optional 10-bit ADC mode for faster conversion
+ *   1. Direct GPIO register writes for MUX select
+ *   2. ESP-IDF ADC oneshot driver (3-4x faster than analogRead)
+ *   3. Reduced settle times
  *   4. Continuous scanning (no delay between frames)
- *   5. Binary-only output for maximum throughput
+ *   5. Binary output for maximum throughput
+ *   6. Bulk serial write (single write per frame)
  *
- * Target: stable >= 60 Hz, ideally 70+ Hz
+ * Target: stable >= 60 Hz
  */
 
 #include <SPI.h>
 #include "soc/gpio_struct.h"
 #include "driver/gpio.h"
+#include "esp_adc/adc_oneshot.h"
+#include "hal/adc_types.h"
 
 // --- Pin definitions ---
 #define RCLK_PIN  13
@@ -22,8 +25,8 @@
 #define MUX_S1    5
 #define MUX_S2    6
 #define MUX_S3    7
-#define MUX1_SIG  9
-#define MUX2_SIG  10
+#define MUX1_SIG  9    // ADC1_CH8
+#define MUX2_SIG  10   // ADC1_CH9
 
 #define SPI_MOSI  11
 #define SPI_SCK   12
@@ -35,25 +38,30 @@
 #define COLS         30
 #define PRESS_THRESHOLD 500
 
-// Use 10-bit ADC for faster conversion (still 0-4095 range, just less precision)
-// Set to 12 if you need full precision
-#define ADC_BITS     12
+// ADC channels for IO9 and IO10 on ESP32-S3
+#define MUX1_ADC_CH  ADC_CHANNEL_8   // IO9
+#define MUX2_ADC_CH  ADC_CHANNEL_9   // IO10
 
 uint16_t grid[ROWS][COLS];
 unsigned long scanTime = 0;
 unsigned long frameCount = 0;
 unsigned long fpsTimer = 0;
 float measuredFps = 0;
-bool binaryMode = true;  // Default to binary for speed
+bool binaryMode = true;
 
 SPIClass *hspi = nullptr;
 uint8_t rowBuf[NUM_595];
 
-// Pre-computed MUX select patterns for direct register write
-// GPIO 4,5,6,7 -> bits 4,5,6,7 in GPIO.out register
-// We create a mask and value for each channel 0-14
+// ADC oneshot handle
+adc_oneshot_unit_handle_t adc1_handle;
+
+// Pre-computed MUX select patterns
 static const uint32_t MUX_PIN_MASK = (1 << MUX_S0) | (1 << MUX_S1) | (1 << MUX_S2) | (1 << MUX_S3);
 uint32_t muxPatterns[COLS_PER_MUX];
+
+// Pre-built binary frame buffer (header + time + grid + footer)
+#define FRAME_SIZE (2 + 4 + ROWS * COLS * 2 + 2)
+uint8_t frameBuf[FRAME_SIZE];
 
 void precomputeMuxPatterns() {
     for (int ch = 0; ch < COLS_PER_MUX; ch++) {
@@ -64,6 +72,22 @@ void precomputeMuxPatterns() {
         if (ch & 0x08) pattern |= (1 << MUX_S3);
         muxPatterns[ch] = pattern;
     }
+}
+
+void initADC() {
+    // Configure ADC1 oneshot driver
+    adc_oneshot_unit_init_cfg_t init_cfg = {
+        .unit_id = ADC_UNIT_1,
+    };
+    adc_oneshot_new_unit(&init_cfg, &adc1_handle);
+
+    // Configure both channels — 12-bit, 11dB attenuation (0-3.3V range)
+    adc_oneshot_chan_cfg_t chan_cfg = {
+        .atten = ADC_ATTEN_DB_11,
+        .bitwidth = ADC_BITWIDTH_12,
+    };
+    adc_oneshot_config_channel(adc1_handle, MUX1_ADC_CH, &chan_cfg);
+    adc_oneshot_config_channel(adc1_handle, MUX2_ADC_CH, &chan_cfg);
 }
 
 void setup() {
@@ -81,16 +105,21 @@ void setup() {
     pinMode(MUX_S2, OUTPUT);
     pinMode(MUX_S3, OUTPUT);
 
-    analogReadResolution(ADC_BITS);
-
+    initADC();
     precomputeMuxPatterns();
+
+    // Pre-fill static parts of frame buffer
+    frameBuf[0] = 0xAA;
+    frameBuf[1] = 0x55;
+    frameBuf[FRAME_SIZE - 2] = 0xFF;
+    frameBuf[FRAME_SIZE - 1] = 0xFE;
 
     fpsTimer = millis();
 
     Serial.println("\n==========================================");
     Serial.printf("ESP32-S3 Test 13: %dx%d Optimized\n", ROWS, COLS);
     Serial.println("==========================================");
-    Serial.printf("ADC resolution: %d bits\n", ADC_BITS);
+    Serial.println("ADC: ESP-IDF oneshot driver (fast)");
     Serial.println("Direct register MUX select");
     Serial.println("Send 'b' for binary, 'a' for ASCII, 's' for stats\n");
 }
@@ -100,9 +129,8 @@ inline void shiftOut595Fast(uint8_t *buf, int len) {
     hspi->transfer(buf, len);
     hspi->endTransaction();
 
-    // Direct register latch pulse — faster than digitalWrite
-    GPIO.out_w1ts = (1 << RCLK_PIN);  // set HIGH
-    GPIO.out_w1tc = (1 << RCLK_PIN);  // set LOW
+    GPIO.out_w1ts = (1 << RCLK_PIN);
+    GPIO.out_w1tc = (1 << RCLK_PIN);
 }
 
 inline void setRowFast(int row) {
@@ -111,8 +139,7 @@ inline void setRowFast(int row) {
     int bit  = row % 8;
     rowBuf[NUM_595 - 1 - chip] = (1 << bit);
     shiftOut595Fast(rowBuf, NUM_595);
-    // Minimal settle — 595 tPHL is ~26 ns, diode adds ~4 ns
-    delayMicroseconds(2);
+    delayMicroseconds(1);
 }
 
 inline void allRowsOff() {
@@ -121,14 +148,14 @@ inline void allRowsOff() {
 }
 
 inline void setMuxChannelFast(int ch) {
-    // Direct register write: clear all MUX pins, then set the pattern
-    GPIO.out_w1tc = MUX_PIN_MASK;        // clear S0-S3
-    GPIO.out_w1ts = muxPatterns[ch];      // set new channel
-    delayMicroseconds(2);  // MUX tPHL is ~40 ns, but ADC input needs settling
+    GPIO.out_w1tc = MUX_PIN_MASK;
+    GPIO.out_w1ts = muxPatterns[ch];
+    delayMicroseconds(1);
 }
 
 void scanGrid() {
     unsigned long start = micros();
+    int val1, val2;
 
     for (int row = 0; row < ROWS; row++) {
         setRowFast(row);
@@ -136,9 +163,11 @@ void scanGrid() {
         for (int ch = 0; ch < COLS_PER_MUX; ch++) {
             setMuxChannelFast(ch);
 
-            // Read both MUXes — back to back
-            grid[row][ch]                = analogRead(MUX1_SIG);
-            grid[row][ch + COLS_PER_MUX] = analogRead(MUX2_SIG);
+            // ESP-IDF oneshot read — much faster than analogRead()
+            adc_oneshot_read(adc1_handle, MUX1_ADC_CH, &val1);
+            adc_oneshot_read(adc1_handle, MUX2_ADC_CH, &val2);
+            grid[row][ch]                = val1;
+            grid[row][ch + COLS_PER_MUX] = val2;
         }
     }
     allRowsOff();
@@ -146,7 +175,6 @@ void scanGrid() {
     scanTime = micros() - start;
     frameCount++;
 
-    // Update FPS every second
     unsigned long now = millis();
     if (now - fpsTimer >= 1000) {
         measuredFps = frameCount * 1000.0 / (now - fpsTimer);
@@ -156,31 +184,24 @@ void scanGrid() {
 }
 
 void sendBinaryFrame() {
-    // Frame: [0xAA 0x55] [scanTime 4 bytes] [2400 bytes grid] [0xFF 0xFE]
-    uint8_t header[2] = {0xAA, 0x55};
-    uint8_t footer[2] = {0xFF, 0xFE};
+    // Pack scan time into frame buffer
+    frameBuf[2] = (uint8_t)((scanTime >> 24) & 0xFF);
+    frameBuf[3] = (uint8_t)((scanTime >> 16) & 0xFF);
+    frameBuf[4] = (uint8_t)((scanTime >> 8) & 0xFF);
+    frameBuf[5] = (uint8_t)(scanTime & 0xFF);
 
-    Serial.write(header, 2);
-
-    // Send scan time as 4 bytes (big-endian) so GUI can compute Hz
-    uint8_t timeBytes[4] = {
-        (uint8_t)((scanTime >> 24) & 0xFF),
-        (uint8_t)((scanTime >> 16) & 0xFF),
-        (uint8_t)((scanTime >> 8) & 0xFF),
-        (uint8_t)(scanTime & 0xFF)
-    };
-    Serial.write(timeBytes, 4);
-
-    // Send grid data: row-major, 2 bytes per cell (big-endian)
+    // Pack grid data into frame buffer
+    int offset = 6;
     for (int r = 0; r < ROWS; r++) {
         for (int c = 0; c < COLS; c++) {
             uint16_t val = grid[r][c];
-            uint8_t buf[2] = {(uint8_t)(val >> 8), (uint8_t)(val & 0xFF)};
-            Serial.write(buf, 2);
+            frameBuf[offset++] = (uint8_t)(val >> 8);
+            frameBuf[offset++] = (uint8_t)(val & 0xFF);
         }
     }
 
-    Serial.write(footer, 2);
+    // Single write — much faster than many small writes
+    Serial.write(frameBuf, FRAME_SIZE);
 }
 
 void sendAsciiFrame() {
@@ -213,7 +234,7 @@ void printStats() {
     Serial.printf("Scan time: %lu us\n", scanTime);
     Serial.printf("Scan rate: %.1f Hz\n", scanHz);
     Serial.printf("Measured FPS: %.1f\n", measuredFps);
-    Serial.printf("ADC bits: %d\n", ADC_BITS);
+    Serial.printf("ADC: ESP-IDF oneshot, 12-bit\n");
     Serial.printf("SPI clock: 10 MHz\n");
     Serial.printf("Mode: %s\n", binaryMode ? "BINARY" : "ASCII");
     Serial.println("-------------------------\n");
