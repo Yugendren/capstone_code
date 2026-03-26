@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for PressureMat — onedir build with firmware bundle."""
+"""PyInstaller spec for PressureMat — single EXE with firmware bundle."""
 
 a = Analysis(
     ['main.py'],
@@ -17,7 +17,10 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'PyQt5', 'PyQt6', 'PySide2', 'PySide6',
+        'tkinter', 'unittest', 'test',
+    ],
     noarchive=False,
 )
 
@@ -26,19 +29,12 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    [],
-    exclude_binaries=True,
-    name='PressureMat',
-    icon='assets/icon.ico',
-    console=False,
-    disable_windowed_traceback=False,
-)
-
-coll = COLLECT(
-    exe,
     a.binaries,
     a.datas,
+    [],
+    name='PressureMat',
+    console=True,
+    disable_windowed_traceback=False,
     strip=False,
     upx=False,
-    name='PressureMat',
 )

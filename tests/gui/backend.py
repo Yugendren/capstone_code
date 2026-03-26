@@ -4,7 +4,9 @@ import asyncio
 import csv
 import json
 import logging
+import math
 import os
+import random
 import struct
 import subprocess
 import sys
@@ -88,15 +90,30 @@ class PressureBackend:
         self._cal_path = os.path.join(self._data_dir, "spine_calibration.json")
         self._force_cal_path = os.path.join(self._data_dir, "force_calibration.json")
         self._settings_path = os.path.join(self._data_dir, "settings.json")
+        self._vertebra_settings_path = os.path.join(self._data_dir, "vertebra_settings.json")
         self._firmware_dir = os.path.join(self._resource_dir, "firmware")
 
         # Firmware flash state
         self._flash_progress = {"status": "idle", "message": "", "percent": 0}
         self._flash_thread = None
 
+        # Vertebra settings
+        self.VERTEBRA_DEFAULTS = {
+            "L1C": {"row": 4, "col": 5, "ext": 1},
+            "L2C": {"row": 7, "col": 5, "ext": 1},
+            "L3C": {"row": 9, "col": 5, "ext": 2},
+            "L4C": {"row": 13, "col": 5, "ext": 2},
+            "L5C": {"row": 17, "col": 5, "ext": 2},
+        }
+        self.vertebra_settings = {}
+
+        # Debug mode
+        self._debug_mode = False
+
         # Load saved calibrations
         self.load_spine_calibration()
         self.load_force_calibration()
+        self.load_vertebra_settings()
 
     # ── Serial ──────────────────────────────────────────────────────
 
@@ -144,6 +161,7 @@ class PressureBackend:
         """Close serial port and stop reader thread."""
         self._stop_event.set()
         self.connected = False
+        self._debug_mode = False
         self.port_name = ""
         if self.ser:
             try:
@@ -153,6 +171,51 @@ class PressureBackend:
             self.ser = None
         log.info("Disconnected")
         return {"success": True}
+
+    def connect_debug(self):
+        """Start debug mode with fake data — no serial required."""
+        if self.connected:
+            self.disconnect()
+        self.connected = True
+        self._debug_mode = True
+        self.port_name = "DEBUG"
+        self._stop_event.clear()
+        self.start_calibration()
+        self._reader_thread = threading.Thread(
+            target=self._debug_data_generator, daemon=True
+        )
+        self._reader_thread.start()
+        log.info("Debug mode started — generating fake data")
+        return {"success": True, "message": "Debug mode active"}
+
+    def _debug_data_generator(self):
+        """Generate fake pressure data for testing without ESP32."""
+        t = 0
+        log.info("Debug data generator running")
+        while not self._stop_event.is_set():
+            t += 1
+            with self.lock:
+                self.scan_hz = 17.8
+                for r in range(self.ROWS):
+                    for c in range(self.COLS):
+                        base = 100
+                        if t > 15:
+                            cx1 = 20 + 12 * math.sin(t * 0.015)
+                            cy1 = 15 + 8 * math.cos(t * 0.02)
+                            d1 = math.sqrt((r - cx1) ** 2 + (c - cy1) ** 2)
+                            blob1 = 2500 * math.exp(-d1 * d1 / 18)
+                            cx2 = 10 + 8 * math.sin(t * 0.04 + 1)
+                            cy2 = 20 + 6 * math.cos(t * 0.05 + 2)
+                            d2 = math.sqrt((r - cx2) ** 2 + (c - cy2) ** 2)
+                            blob2 = 1500 * math.exp(-d2 * d2 / 12)
+                            self.grid_raw[r][c] = min(
+                                4095, int(base + blob1 + blob2 + random.randint(0, 30))
+                            )
+                        else:
+                            self.grid_raw[r][c] = base + random.randint(0, 20)
+                self._process_full_scan()
+            time.sleep(0.056)
+        log.info("Debug data generator exiting")
 
     def _serial_reader_binary(self):
         """Binary frame parser — runs in its own thread."""
@@ -743,6 +806,36 @@ class PressureBackend:
             self._flash_progress = {"status": "error", "message": str(e), "percent": 0}
             log.error("Flash error: %s", e)
 
+    # ── Vertebra Settings ─────────────────────────────────────────
+
+    def load_vertebra_settings(self):
+        """Load vertebra settings from JSON file, or use defaults."""
+        if os.path.exists(self._vertebra_settings_path):
+            try:
+                with open(self._vertebra_settings_path) as f:
+                    self.vertebra_settings = json.load(f)
+                log.info("Vertebra settings loaded from %s", self._vertebra_settings_path)
+                return
+            except Exception as e:
+                log.warning("Failed to load vertebra settings: %s", e)
+        self.vertebra_settings = {k: dict(v) for k, v in self.VERTEBRA_DEFAULTS.items()}
+        log.info("Using default vertebra settings")
+
+    def save_vertebra_settings(self, data):
+        """Write vertebra settings to JSON file."""
+        self.vertebra_settings = data
+        with open(self._vertebra_settings_path, "w") as f:
+            json.dump(data, f, indent=2)
+        log.info("Vertebra settings saved to %s", self._vertebra_settings_path)
+
+    def reset_vertebra_settings(self):
+        """Reset to defaults and save."""
+        self.vertebra_settings = {k: dict(v) for k, v in self.VERTEBRA_DEFAULTS.items()}
+        with open(self._vertebra_settings_path, "w") as f:
+            json.dump(self.vertebra_settings, f, indent=2)
+        log.info("Vertebra settings reset to defaults")
+        return self.vertebra_settings
+
     # ── Settings ────────────────────────────────────────────────────
 
     def load_settings(self):
@@ -770,6 +863,7 @@ class PressureBackend:
                 while True:
                     with self.lock:
                         data = {
+                            "type": "frame",
                             "rows": self.ROWS,
                             "cols": self.COLS,
                             "raw": [row[:] for row in self.grid_raw],
@@ -782,6 +876,7 @@ class PressureBackend:
                             "spine_markers": dict(self.spine_markers),
                             "exercise_region": self.exercise_region,
                             "session_active": self.session_active,
+                            "vertebra_settings": dict(self.vertebra_settings),
                         }
                     await websocket.send(json.dumps(data))
                     await asyncio.sleep(0.033)  # ~30 FPS
@@ -798,6 +893,24 @@ class PressureBackend:
                         elif action == "set_noise_floor":
                             with self.lock:
                                 self.noise_floor = int(cmd["value"])
+                        elif action == "save_vertebra_settings":
+                            try:
+                                self.save_vertebra_settings(cmd["settings"])
+                                await websocket.send(json.dumps({
+                                    "type": "vertebra_settings_saved",
+                                    "settings": self.vertebra_settings,
+                                }))
+                            except Exception as e:
+                                await websocket.send(json.dumps({
+                                    "type": "vertebra_settings_error",
+                                    "error": str(e),
+                                }))
+                        elif action == "reset_vertebra_settings":
+                            settings = self.reset_vertebra_settings()
+                            await websocket.send(json.dumps({
+                                "type": "vertebra_settings_reset",
+                                "settings": settings,
+                            }))
                     except Exception as e:
                         log.warning("WS command error: %s", e)
 

@@ -8,15 +8,65 @@ Binary protocol: 0xAA 0x55 [4 bytes scanTime] [ROWS*COLS*2 bytes] 0xFF 0xFE
 
 import asyncio
 import json
+import math
 import os
+import random
 import re
 import struct
+import sys
 import threading
-import serial
+import time as _time
 import websockets
+
+# Debug mode: run without ESP32 using fake data
+DEBUG_MODE = "--debug" in sys.argv or os.environ.get("DEBUG", "").lower() in ("1", "true", "yes")
+
+try:
+    import serial
+except ImportError:
+    if not DEBUG_MODE:
+        raise
+    serial = None  # Not needed in debug mode
 
 SERIAL_PORT = os.environ.get("SERIAL_PORT", "/dev/ttyACM0")
 BAUD_RATE = int(os.environ.get("BAUD_RATE", "115200"))
+
+# ── Vertebra Settings ────────────────────────────────────────────
+VERTEBRA_DEFAULTS = {
+    "L1C": {"row": 4, "col": 5, "ext": 1},
+    "L2C": {"row": 7, "col": 5, "ext": 1},
+    "L3C": {"row": 9, "col": 5, "ext": 2},
+    "L4C": {"row": 13, "col": 5, "ext": 2},
+    "L5C": {"row": 17, "col": 5, "ext": 2},
+}
+vertebra_settings_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "vertebra_settings.json"
+)
+vertebra_settings = {}
+
+
+def load_vertebra_settings():
+    """Load vertebra settings from JSON file, or use defaults."""
+    global vertebra_settings
+    if os.path.exists(vertebra_settings_path):
+        try:
+            with open(vertebra_settings_path) as f:
+                vertebra_settings = json.load(f)
+            print(f"Vertebra settings loaded from {vertebra_settings_path}")
+            return
+        except Exception as e:
+            print(f"Failed to load vertebra settings: {e}")
+    vertebra_settings = {k: dict(v) for k, v in VERTEBRA_DEFAULTS.items()}
+    print("Using default vertebra settings")
+
+
+def save_vertebra_settings_to_disk(data):
+    """Write vertebra settings to JSON file."""
+    global vertebra_settings
+    vertebra_settings = data
+    with open(vertebra_settings_path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Vertebra settings saved to {vertebra_settings_path}")
 
 # Grid dimensions — auto-detected or set via env
 ROWS = int(os.environ.get("ROWS", "40"))
@@ -228,8 +278,42 @@ def serial_reader_binary():
             print(f"Parse error: {e}")
 
 
+def debug_data_generator():
+    """Generate fake pressure data for GUI testing without ESP32."""
+    global grid_raw, scan_hz
+    scan_hz = 17.8
+    t = 0
+
+    print("DEBUG MODE: generating fake pressure data")
+    while True:
+        t += 1
+        with lock:
+            for r in range(ROWS):
+                for c in range(COLS):
+                    base = 100
+                    if t > 15:  # After calibration settles
+                        # Blob 1: slow moving
+                        cx1 = 20 + 12 * math.sin(t * 0.015)
+                        cy1 = 15 + 8 * math.cos(t * 0.02)
+                        d1 = math.sqrt((r - cx1) ** 2 + (c - cy1) ** 2)
+                        blob1 = 2500 * math.exp(-d1 * d1 / 18)
+                        # Blob 2: faster, smaller
+                        cx2 = 10 + 8 * math.sin(t * 0.04 + 1)
+                        cy2 = 20 + 6 * math.cos(t * 0.05 + 2)
+                        d2 = math.sqrt((r - cx2) ** 2 + (c - cy2) ** 2)
+                        blob2 = 1500 * math.exp(-d2 * d2 / 12)
+                        grid_raw[r][c] = min(4095, int(base + blob1 + blob2 + random.randint(0, 30)))
+                    else:
+                        grid_raw[r][c] = base + random.randint(0, 20)
+            process_full_scan()
+        _time.sleep(0.056)
+
+
 def serial_reader():
-    """Auto-select ASCII or binary reader based on SERIAL_MODE env var."""
+    """Auto-select reader based on mode and debug flag."""
+    if DEBUG_MODE:
+        debug_data_generator()
+        return
     mode = os.environ.get("SERIAL_MODE", "ascii").lower()
     if mode == "binary":
         print("Using binary serial parser")
@@ -245,6 +329,7 @@ async def ws_handler(websocket):
         while True:
             with lock:
                 data = {
+                    "type": "frame",
                     "rows": ROWS,
                     "cols": COLS,
                     "raw": [row[:] for row in grid_raw],
@@ -254,6 +339,7 @@ async def ws_handler(websocket):
                     "pressed": pressed,
                     "calibrating": calibrating,
                     "noise_floor": noise_floor,
+                    "vertebra_settings": dict(vertebra_settings),
                 }
             await websocket.send(json.dumps(data))
             await asyncio.sleep(0.033)
@@ -262,22 +348,46 @@ async def ws_handler(websocket):
         global noise_floor
         async for msg in websocket:
             cmd = json.loads(msg)
-            if cmd.get("action") == "calibrate":
+            action = cmd.get("action")
+            if action == "calibrate":
                 with lock:
                     start_calibration()
                 print("Recalibrating...")
-            elif cmd.get("action") == "set_noise_floor":
+            elif action == "set_noise_floor":
                 with lock:
                     noise_floor = int(cmd["value"])
                 print(f"Noise floor set to {noise_floor}")
+            elif action == "save_vertebra_settings":
+                try:
+                    save_vertebra_settings_to_disk(cmd["settings"])
+                    await websocket.send(json.dumps({
+                        "type": "vertebra_settings_saved",
+                        "settings": vertebra_settings,
+                    }))
+                except Exception as e:
+                    await websocket.send(json.dumps({
+                        "type": "vertebra_settings_error",
+                        "error": str(e),
+                    }))
+            elif action == "reset_vertebra_settings":
+                defaults = {k: dict(v) for k, v in VERTEBRA_DEFAULTS.items()}
+                save_vertebra_settings_to_disk(defaults)
+                await websocket.send(json.dumps({
+                    "type": "vertebra_settings_reset",
+                    "settings": vertebra_settings,
+                }))
 
     await asyncio.gather(sender(), receiver())
 
 
 async def main():
+    load_vertebra_settings()
     t = threading.Thread(target=serial_reader, daemon=True)
     t.start()
-    print(f"Serial reader started on {SERIAL_PORT} @ {BAUD_RATE} baud")
+    if DEBUG_MODE:
+        print("DEBUG MODE — no serial port needed")
+    else:
+        print(f"Serial reader started on {SERIAL_PORT} @ {BAUD_RATE} baud")
     print(f"Grid size: {ROWS}x{COLS} ({ROWS*COLS} cells)")
     print("WebSocket server on ws://localhost:8765")
     print("Open http://localhost:8080 in your browser")

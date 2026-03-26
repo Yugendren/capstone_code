@@ -182,6 +182,34 @@
     border-radius: 2px; margin-right: 3px; vertical-align: middle;
   }
 
+  /* Content main — wraps heatmap + graph, switches to side-by-side during session */
+  #content-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+    gap: 2px;
+  }
+  #content-main.side-by-side {
+    flex-direction: row;
+    gap: 8px;
+  }
+  #content-main.side-by-side #grid-wrapper {
+    flex: 0 0 55%;
+    max-height: none;
+  }
+  #content-main.side-by-side #graph-panel {
+    flex: 0 0 44%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  #content-main.side-by-side #graph-wrapper {
+    flex: 1;
+    height: auto;
+  }
+
   /* Canvas — fill available space */
   #grid-wrapper {
     flex: 1;
@@ -193,13 +221,16 @@
   }
   #grid-canvas { display: block; }
 
-  /* Graph — fixed height, never overlaps heatmap */
+  /* Graph panel — wraps graph controls + graph canvas */
+  #graph-panel { display: none; }
+  #graph-panel.visible { display: flex; flex-direction: column; gap: 4px; }
+
+  /* Graph — fixed height in stacked mode, flex in side-by-side */
   #graph-wrapper {
     width: 100%;
     height: 150px;
     flex-shrink: 0;
     flex-grow: 0;
-    display: none;
   }
   #graph-canvas { display: block; width: 100%; height: 100%; }
   .graph-controls {
@@ -207,6 +238,33 @@
     font-size: 12px; color: var(--text-dim); justify-content: center;
     flex-shrink: 0;
   }
+
+  /* Vertebra config modal */
+  #vertebra-config-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center; z-index: 60;
+  }
+  .vc-panel {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 28px 36px; min-width: 440px; text-align: center;
+  }
+  .vc-panel h3 { margin-bottom: 16px; font-size: 18px; }
+  .vc-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .vc-step {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px;
+  }
+  .vc-dot {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border); display: flex;
+    align-items: center; justify-content: center; font-size: 8px;
+  }
+  .vc-dot.done { background: var(--success); border-color: var(--success); }
+  .vc-dot.active { border-color: var(--accent); background: rgba(74,144,217,0.2); }
+  .vc-instruction { font-size: 15px; color: var(--text); margin-bottom: 12px; min-height: 40px; }
+  .vc-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 16px; }
+  .vc-result { font-size: 13px; color: var(--success); margin-top: 10px; min-height: 20px; }
+  .vc-actions { display: flex; gap: 10px; justify-content: center; }
 
   /* Tooltip */
   #tooltip {
@@ -384,6 +442,7 @@
       <button class="btn" onclick="refreshPorts()">Refresh</button>
     </div>
     <button class="btn btn-primary connect-btn" id="connect-btn" onclick="doConnect()">Connect</button>
+    <button class="btn connect-btn" style="margin-top:4px;background:#2a3a2a;border-color:#4a4;color:#8c8" onclick="doConnectDebug()">Debug Mode (No Device)</button>
     <div class="conn-status" id="conn-status"></div>
     <div style="text-align:center;margin-top:4px">
       <a href="#" onclick="openFlashModal();return false" style="color:var(--text-dim);font-size:12px;text-decoration:none">
@@ -428,6 +487,9 @@
       <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
         <input type="checkbox" id="spine-overlay-toggle" checked onchange="showSpineOverlay=this.checked"> Spine
       </label>
+      <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
+        <input type="checkbox" id="vertebra-regions-toggle" checked onchange="showVertebraRegions=this.checked; if(latestData) drawGrid(latestData)"> Regions
+      </label>
       <button class="btn btn-sm" onclick="openForceCalibration()">Calibrate Force</button>
       <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
         <input type="checkbox" id="force-cal-toggle" onchange="forceCalEnabled=this.checked; if(latestData) drawGrid(latestData)"> Force
@@ -460,20 +522,23 @@
       </div>
     </div>
 
-    <div id="grid-wrapper">
-      <canvas id="grid-canvas"></canvas>
-    </div>
-
-    <div class="graph-controls" id="graph-controls" style="display:none">
-      <span id="tracking-label">Tracking: -- (auto)</span>
-      <div class="mode-toggle">
-        <button class="btn btn-sm active" id="btn-amplitude" onclick="setGraphMode('amplitude')">Amplitude</button>
-        <button class="btn btn-sm" id="btn-displacement" onclick="setGraphMode('displacement')">Displacement</button>
+    <div id="content-main">
+      <div id="grid-wrapper">
+        <canvas id="grid-canvas"></canvas>
       </div>
-      <span id="displacement-note" style="display:none;font-size:10px;color:#a88;font-style:italic">Note: visual representation only, not actual displacement</span>
-    </div>
-    <div id="graph-wrapper">
-      <canvas id="graph-canvas"></canvas>
+      <div id="graph-panel">
+        <div class="graph-controls" id="graph-controls">
+          <span id="tracking-label">Tracking: -- (auto)</span>
+          <div class="mode-toggle">
+            <button class="btn btn-sm active" id="btn-amplitude" onclick="setGraphMode('amplitude')">Amplitude</button>
+            <button class="btn btn-sm" id="btn-displacement" onclick="setGraphMode('displacement')">Displacement</button>
+          </div>
+          <span id="displacement-note" style="display:none;font-size:10px;color:#a88;font-style:italic">Note: visual representation only, not actual displacement</span>
+        </div>
+        <div id="graph-wrapper">
+          <canvas id="graph-canvas"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -615,6 +680,19 @@
     </div>
 
     <div class="setting-group">
+      <label>Vertebra Regions</label>
+      <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-primary" onclick="closeSettings();openVertebraConfig()">Press to Configure</button>
+        <button class="btn btn-sm" onclick="resetVertebraSettingsUI()">Reset Defaults</button>
+      </div>
+      <div id="vertebra-settings-inputs" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-size:12px"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-sm" onclick="saveVertebraSettingsUI()">Save Manual Edits</button>
+      </div>
+      <div id="vertebra-settings-status" style="font-size:11px;color:var(--success);min-height:1em;margin-top:2px"></div>
+    </div>
+
+    <div class="setting-group">
       <label>Firmware</label>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn btn-sm" onclick="closeSettings();openFlashModal()">Flash Firmware to Device</button>
@@ -654,6 +732,26 @@
     <div class="settings-actions">
       <button class="btn btn-primary" id="flash-btn" onclick="doFlash()">Flash</button>
       <button class="btn" id="flash-close-btn" onclick="closeFlashModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="vertebra-config-modal">
+  <div class="vc-panel">
+    <h3>Vertebra Press Configuration</h3>
+    <div class="vc-instruction" id="vc-instruction">
+      Press on the mat at each vertebra position when prompted.<br>
+      3 presses per vertebra: Left, Middle, Right.
+    </div>
+    <div class="vc-sub" id="vc-sub"></div>
+    <div class="vc-progress" id="vc-progress"></div>
+    <div class="vc-result" id="vc-result"></div>
+    <div class="vc-actions">
+      <button class="btn btn-primary" id="vc-start-btn" onclick="startVertebraConfig()">Start</button>
+      <button class="btn btn-primary" id="vc-capture-btn" onclick="captureVertebraPress()" style="display:none">Capture</button>
+      <button class="btn btn-success" id="vc-accept-btn" onclick="acceptVertebraConfig()" style="display:none">Accept &amp; Save</button>
+      <button class="btn" id="vc-redo-btn" onclick="redoVertebraConfig()" style="display:none">Redo</button>
+      <button class="btn" id="vc-cancel-btn" onclick="cancelVertebraConfig()">Cancel</button>
     </div>
   </div>
 </div>
@@ -724,6 +822,15 @@ let forceCalEnabled = false;    // checkbox state
 // Spine
 const SPINE_LABELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
 let spinePreviewMarkers = null;  // temp markers shown during preview
+
+// Vertebra settings (L1C-L5C with row/col/ext regions)
+const VERTEBRA_DEFAULTS = {
+  L1C: {row:4, col:5, ext:1}, L2C: {row:7, col:5, ext:1},
+  L3C: {row:9, col:5, ext:2}, L4C: {row:13, col:5, ext:2}, L5C: {row:17, col:5, ext:2},
+};
+let vertebraSettings = {};
+let showVertebraRegions = true;
+for (const k in VERTEBRA_DEFAULTS) vertebraSettings[k] = Object.assign({}, VERTEBRA_DEFAULTS[k]);
 
 // ═══════════════════════════════════════════════════════════
 // Connection Screen
@@ -831,6 +938,26 @@ async function doConnect() {
   btn.disabled = false;
 }
 
+async function doConnectDebug() {
+  const status = document.getElementById('conn-status');
+  status.className = 'conn-status';
+  status.textContent = 'Starting debug mode...';
+  try {
+    const result = await pywebview.api.connect_debug();
+    if (result.success) {
+      status.className = 'conn-status ok';
+      status.textContent = 'Debug mode active!';
+      showMainView('DEBUG');
+    } else {
+      status.className = 'conn-status error';
+      status.textContent = result.message;
+    }
+  } catch (e) {
+    status.className = 'conn-status error';
+    status.textContent = 'Debug start failed: ' + e;
+  }
+}
+
 function showMainView(port) {
   document.getElementById('connection-screen').style.display = 'none';
   document.getElementById('main-view').style.display = 'flex';
@@ -881,7 +1008,17 @@ async function connectWebSocket() {
   try { port = await pywebview.api.get_ws_port(); } catch(e) {}
   ws = new WebSocket('ws://127.0.0.1:' + port);
   ws.onopen = () => { document.getElementById('main-status-dot').className = 'status-dot on'; };
-  ws.onmessage = (e) => updateDisplay(JSON.parse(e.data));
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'vertebra_settings_saved' || msg.type === 'vertebra_settings_reset') {
+      vertebraSettings = msg.settings;
+      if (latestData) drawGrid(latestData);
+    } else if (msg.type === 'vertebra_settings_error') {
+      // Handled by saveVertebraSettingsUI
+    } else {
+      updateDisplay(msg);
+    }
+  };
   ws.onclose = () => {
     document.getElementById('main-status-dot').className = 'status-dot off';
     setTimeout(async () => {
@@ -1031,6 +1168,9 @@ function drawGrid(data) {
   const activeMarkers = spinePreviewMarkers || (showSpineOverlay ? data.spine_markers : null);
   if (activeMarkers) drawSpineOverlay(activeMarkers);
 
+  // Vertebra region bounding boxes
+  if (showVertebraRegions) drawVertebraRegions();
+
   // Spine trail overlay during calibration scan
   if (spineTrailGrid) {
     drawSpineTrail();
@@ -1114,6 +1254,109 @@ function drawSpineOverlay(markers) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Vertebra Region Bounding Boxes
+// ═══════════════════════════════════════════════════════════
+
+function drawVertebraRegions() {
+  const labels = Object.keys(vertebraSettings).sort();
+  for (const label of labels) {
+    const v = vertebraSettings[label];
+    const row = v.row, col = v.col, ext = v.ext;
+    if (row === 0 && col === 0) continue;
+
+    const px = LABEL_W + (ROWS - row - ext) * cellW;
+    const py = LABEL_H + (COLS - col - ext) * cellH;
+    const pw = ext * cellW;
+    const ph = ext * cellH;
+
+    ctx.strokeStyle = '#ff3333';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, pw, ph);
+
+    ctx.fillStyle = '#ff3333';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, px + pw / 2, py - 2);
+  }
+}
+
+// Vertebra settings UI in settings modal
+function buildVertebraSettingsInputs() {
+  const container = document.getElementById('vertebra-settings-inputs');
+  container.innerHTML = '';
+  const labels = Object.keys(vertebraSettings).sort();
+  for (const label of labels) {
+    const v = vertebraSettings[label];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+    row.innerHTML = `
+      <span style="width:32px;font-weight:bold;color:#aaa">${label}</span>
+      R: <input type="number" id="vs-${label}-row" min="0" max="39" value="${v.row}"
+         style="width:50px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:2px 4px;text-align:center;font-size:12px">
+      C: <input type="number" id="vs-${label}-col" min="0" max="29" value="${v.col}"
+         style="width:50px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:2px 4px;text-align:center;font-size:12px">
+      Ext: <select id="vs-${label}-ext"
+         style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-size:12px">
+        <option value="1" ${v.ext===1?'selected':''}>1</option>
+        <option value="2" ${v.ext===2?'selected':''}>2</option>
+        <option value="3" ${v.ext===3?'selected':''}>3</option>
+      </select>
+    `;
+    container.appendChild(row);
+  }
+}
+
+function readVertebraSettingsInputs() {
+  const result = {};
+  for (const label of Object.keys(vertebraSettings).sort()) {
+    result[label] = {
+      row: parseInt(document.getElementById(`vs-${label}-row`).value) || 0,
+      col: parseInt(document.getElementById(`vs-${label}-col`).value) || 0,
+      ext: parseInt(document.getElementById(`vs-${label}-ext`).value) || 1,
+    };
+  }
+  return result;
+}
+
+async function saveVertebraSettingsUI() {
+  const data = readVertebraSettingsInputs();
+  // Validate
+  for (const label in data) {
+    const v = data[label];
+    if (v.row + v.ext - 1 > 39 || v.col + v.ext - 1 > 29) {
+      document.getElementById('vertebra-settings-status').textContent = `${label}: overflow (row+ext or col+ext out of bounds)`;
+      document.getElementById('vertebra-settings-status').style.color = 'var(--danger)';
+      return;
+    }
+  }
+  try {
+    const result = await pywebview.api.save_vertebra_settings(data);
+    vertebraSettings = result;
+    document.getElementById('vertebra-settings-status').textContent = 'Settings saved!';
+    document.getElementById('vertebra-settings-status').style.color = 'var(--success)';
+    if (latestData) drawGrid(latestData);
+  } catch (e) {
+    document.getElementById('vertebra-settings-status').textContent = 'Error: ' + e;
+    document.getElementById('vertebra-settings-status').style.color = 'var(--danger)';
+  }
+}
+
+async function resetVertebraSettingsUI() {
+  try {
+    const result = await pywebview.api.reset_vertebra_settings();
+    vertebraSettings = result;
+    buildVertebraSettingsInputs();
+    document.getElementById('vertebra-settings-status').textContent = 'Reset to defaults!';
+    document.getElementById('vertebra-settings-status').style.color = 'var(--success)';
+    if (latestData) drawGrid(latestData);
+  } catch (e) {
+    document.getElementById('vertebra-settings-status').textContent = 'Error: ' + e;
+    document.getElementById('vertebra-settings-status').style.color = 'var(--danger)';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // Alert System — louder, more reliable
 // ═══════════════════════════════════════════════════════════
 
@@ -1177,6 +1420,7 @@ function updateDisplay(data) {
   const newCols = data.cols || COLS;
   if (newRows !== ROWS || newCols !== COLS) { ROWS = newRows; COLS = newCols; resizeCanvas(); }
   overlay.style.display = data.calibrating ? 'flex' : 'none';
+  if (data.vertebra_settings) vertebraSettings = data.vertebra_settings;
 
   // Accumulate spine trail during scan
   if (spineScanActive && spineTrailGrid && data.grid) {
@@ -1213,8 +1457,6 @@ function updateNearestVertebra(data) {
     }
   }
 
-  if (!markers || Object.keys(markers).length === 0) { el.style.display = 'none'; return; }
-
   let peakVal = 0, peakR = 0, peakC = 0;
   const grid = data.grid;
   for (let r = 0; r < ROWS; r++)
@@ -1225,13 +1467,32 @@ function updateNearestVertebra(data) {
   if (peakVal === 0) { el.style.display = 'none'; return; }
 
   let nearest = '', minDist = Infinity;
-  for (const [label, [mr, mc]] of Object.entries(markers)) {
-    const d = Math.sqrt((peakR - mr) ** 2 + (peakC - mc) ** 2);
+
+  // Check spine markers first
+  if (markers && Object.keys(markers).length > 0) {
+    for (const [label, [mr, mc]] of Object.entries(markers)) {
+      const d = Math.sqrt((peakR - mr) ** 2 + (peakC - mc) ** 2);
+      if (d < minDist) { minDist = d; nearest = label; }
+    }
+  }
+
+  // Also check vertebra region settings (may be closer)
+  for (const label in vertebraSettings) {
+    const v = vertebraSettings[label];
+    if (v.row === 0 && v.col === 0) continue;
+    const cr = v.row + (v.ext - 1) / 2;
+    const cc = v.col + (v.ext - 1) / 2;
+    const d = Math.sqrt((peakR - cr) ** 2 + (peakC - cc) ** 2);
     if (d < minDist) { minDist = d; nearest = label; }
   }
-  el.style.display = 'inline';
-  el.textContent = `Peak near: ${nearest} — ADC: ${peakVal}`;
-  if (graphTracking === 'auto') { graphCurrentLabel = nearest; updateTrackingLabel(); }
+
+  if (nearest) {
+    el.style.display = 'inline';
+    el.textContent = `Peak near: ${nearest} — ADC: ${peakVal}`;
+    if (graphTracking === 'auto') { graphCurrentLabel = nearest; updateTrackingLabel(); }
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1275,8 +1536,8 @@ async function toggleSession() {
     document.getElementById('session-badge').textContent = 'Recording';
     document.getElementById('session-badge').className = 'session-badge badge-recording';
     document.getElementById('exercise-select').disabled = true;
-    document.getElementById('graph-wrapper').style.display = 'block';
-    document.getElementById('graph-controls').style.display = 'flex';
+    document.getElementById('graph-panel').classList.add('visible');
+    document.getElementById('content-main').classList.add('side-by-side');
     // Resize heatmap first (now smaller due to graph), then graph
     setTimeout(() => { resizeCanvas(); resizeGraph(); }, 50);
     resetGraph();
@@ -1290,8 +1551,8 @@ async function toggleSession() {
     document.getElementById('session-badge').textContent = 'Stopped';
     document.getElementById('session-badge').className = 'session-badge badge-stopped';
     document.getElementById('exercise-select').disabled = false;
-    document.getElementById('graph-wrapper').style.display = 'none';
-    document.getElementById('graph-controls').style.display = 'none';
+    document.getElementById('graph-panel').classList.remove('visible');
+    document.getElementById('content-main').classList.remove('side-by-side');
     // Resize heatmap back to full height
     setTimeout(() => resizeCanvas(), 50);
     const result = await pywebview.api.stop_session();
@@ -1839,6 +2100,8 @@ async function openSettings() {
   document.getElementById('set-thresh-low').value = threshLow;
   document.getElementById('set-spine-overlay').checked = showSpineOverlay;
   document.getElementById('set-axis-labels').checked = showAxisLabels;
+  document.getElementById('vertebra-regions-toggle').checked = showVertebraRegions;
+  buildVertebraSettingsInputs();
   document.getElementById('settings-modal').style.display = 'flex';
   // Update force calibration status
   try {
@@ -2010,6 +2273,197 @@ async function doFlash() {
       }
     } catch(e) {}
   }, 500);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Vertebra Press Configuration Wizard
+// ═══════════════════════════════════════════════════════════
+
+const VC_LABELS = ['L1C', 'L2C', 'L3C', 'L4C', 'L5C'];
+const VC_SIDES = ['Left', 'Mid', 'Right'];
+// Build step list: L1C-Left, L1C-Mid, L1C-Right, L2C-Left, ...
+const VC_STEPS = [];
+for (const label of VC_LABELS) {
+  for (const side of VC_SIDES) {
+    VC_STEPS.push({ label, side, key: `${label}-${side}` });
+  }
+}
+
+let vcStep = 0;
+let vcCaptures = {};  // { 'L1C-Left': {row, col}, 'L1C-Mid': {row, col}, ... }
+
+function openVertebraConfig() {
+  vcStep = 0;
+  vcCaptures = {};
+  document.getElementById('vertebra-config-modal').style.display = 'flex';
+  document.getElementById('vc-start-btn').style.display = '';
+  document.getElementById('vc-capture-btn').style.display = 'none';
+  document.getElementById('vc-accept-btn').style.display = 'none';
+  document.getElementById('vc-redo-btn').style.display = 'none';
+  document.getElementById('vc-progress').innerHTML = '';
+  document.getElementById('vc-result').textContent = '';
+  document.getElementById('vc-instruction').innerHTML =
+    'Press on the mat at each vertebra position when prompted.<br>3 presses per vertebra: Left, Middle, Right.';
+  document.getElementById('vc-sub').textContent = `${VC_STEPS.length} steps total (${VC_LABELS.length} vertebrae × 3 positions)`;
+}
+
+function startVertebraConfig() {
+  vcStep = 0;
+  vcCaptures = {};
+  document.getElementById('vc-start-btn').style.display = 'none';
+  document.getElementById('vc-capture-btn').style.display = '';
+  showVcStep();
+}
+
+function showVcStep() {
+  const step = VC_STEPS[vcStep];
+  document.getElementById('vc-instruction').textContent =
+    `Press the ${step.side.toUpperCase()} side of ${step.label} on the mat, then click Capture.`;
+  document.getElementById('vc-sub').textContent =
+    `Step ${vcStep + 1} of ${VC_STEPS.length}`;
+  document.getElementById('vc-result').textContent = '';
+  document.getElementById('vc-capture-btn').disabled = false;
+  document.getElementById('vc-capture-btn').textContent = 'Capture';
+
+  // Build progress dots
+  let html = '';
+  for (let i = 0; i < VC_STEPS.length; i++) {
+    const s = VC_STEPS[i];
+    let cls = 'vc-dot';
+    if (i < vcStep) cls += ' done';
+    else if (i === vcStep) cls += ' active';
+    const shortLabel = s.label.replace('C', '') + s.side[0];
+    html += `<div class="vc-step"><div class="${cls}">${i < vcStep ? '&#10003;' : ''}</div><span>${shortLabel}</span></div>`;
+  }
+  document.getElementById('vc-progress').innerHTML = html;
+}
+
+function captureVertebraPress() {
+  if (!latestData) {
+    document.getElementById('vc-result').textContent = 'No data — wait for sensor data';
+    return;
+  }
+
+  const btn = document.getElementById('vc-capture-btn');
+  btn.disabled = true;
+  btn.textContent = 'Capturing...';
+
+  // Average a few frames for stability — use current frame's peak
+  const grid = latestData.grid;
+  let peakVal = 0, peakRow = 0, peakCol = 0;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r] ? (grid[r][c] || 0) : 0;
+      if (v > peakVal) { peakVal = v; peakRow = r; peakCol = c; }
+    }
+  }
+
+  if (peakVal < 100) {
+    document.getElementById('vc-result').textContent = 'No pressure detected — press harder and retry.';
+    btn.disabled = false;
+    btn.textContent = 'Retry';
+    return;
+  }
+
+  const step = VC_STEPS[vcStep];
+  vcCaptures[step.key] = { row: peakRow, col: peakCol, adc: peakVal };
+  document.getElementById('vc-result').textContent =
+    `Captured ${step.label} ${step.side}: R${peakRow} C${peakCol} (ADC: ${peakVal})`;
+
+  vcStep++;
+
+  if (vcStep >= VC_STEPS.length) {
+    // All done
+    setTimeout(showVcSummary, 600);
+  } else {
+    setTimeout(showVcStep, 600);
+  }
+}
+
+function showVcSummary() {
+  document.getElementById('vc-capture-btn').style.display = 'none';
+  document.getElementById('vc-accept-btn').style.display = '';
+  document.getElementById('vc-redo-btn').style.display = '';
+  document.getElementById('vc-instruction').textContent = 'All positions captured! Review:';
+
+  // Build all-done progress
+  let progressHtml = '';
+  for (let i = 0; i < VC_STEPS.length; i++) {
+    const s = VC_STEPS[i];
+    const shortLabel = s.label.replace('C', '') + s.side[0];
+    progressHtml += `<div class="vc-step"><div class="vc-dot done">&#10003;</div><span>${shortLabel}</span></div>`;
+  }
+  document.getElementById('vc-progress').innerHTML = progressHtml;
+
+  // Compute and show final settings
+  const computed = computeVertebraFromCaptures();
+  let summary = '';
+  for (const label of VC_LABELS) {
+    const v = computed[label];
+    summary += `${label}: R${v.row} C${v.col} ext=${v.ext}  `;
+  }
+  document.getElementById('vc-sub').textContent = summary;
+  document.getElementById('vc-result').textContent = '';
+}
+
+function computeVertebraFromCaptures() {
+  const result = {};
+  for (const label of VC_LABELS) {
+    const left = vcCaptures[`${label}-Left`];
+    const mid = vcCaptures[`${label}-Mid`];
+    const right = vcCaptures[`${label}-Right`];
+
+    if (!left || !mid || !right) {
+      result[label] = { row: mid ? mid.row : 0, col: mid ? mid.col : 0, ext: 1 };
+      continue;
+    }
+
+    // Compute bounding box from all 3 points
+    const rows = [left.row, mid.row, right.row];
+    const cols = [left.col, mid.col, right.col];
+    const minRow = Math.min(...rows);
+    const maxRow = Math.max(...rows);
+    const minCol = Math.min(...cols);
+    const maxCol = Math.max(...cols);
+
+    const extRow = maxRow - minRow + 1;
+    const extCol = maxCol - minCol + 1;
+    const ext = Math.max(extRow, extCol, 1);
+
+    // Anchor at top-left of the bounding region
+    result[label] = {
+      row: minRow,
+      col: minCol,
+      ext: Math.min(ext, 5),  // cap at 5 to be reasonable
+    };
+  }
+  return result;
+}
+
+async function acceptVertebraConfig() {
+  const computed = computeVertebraFromCaptures();
+  try {
+    const result = await pywebview.api.save_vertebra_settings(computed);
+    vertebraSettings = result;
+    document.getElementById('vertebra-config-modal').style.display = 'none';
+    if (latestData) drawGrid(latestData);
+  } catch (e) {
+    document.getElementById('vc-result').textContent = 'Save failed: ' + e;
+  }
+}
+
+function redoVertebraConfig() {
+  vcStep = 0;
+  vcCaptures = {};
+  document.getElementById('vc-accept-btn').style.display = 'none';
+  document.getElementById('vc-redo-btn').style.display = 'none';
+  document.getElementById('vc-capture-btn').style.display = '';
+  document.getElementById('vc-start-btn').style.display = 'none';
+  showVcStep();
+}
+
+function cancelVertebraConfig() {
+  document.getElementById('vertebra-config-modal').style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════════

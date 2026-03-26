@@ -47,11 +47,57 @@
   button.active { background: #4a2a2a; border-color: #f66; color: #f99; }
   #noise-slider { width: 100px; accent-color: #f66; }
   #mode-toggle { display: flex; gap: 0.4rem; }
-  #grid-wrapper {
-    width: min(95vw, 1200px);
-    max-height: min(80vh, 800px);
-    overflow: auto;
+
+  /* Tab bar */
+  #tab-bar {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.2rem;
   }
+  #tab-bar button {
+    padding: 6px 16px;
+    font-size: 0.8rem;
+  }
+  #tab-bar button.tab-active {
+    background: #3a3a6a;
+    border-color: #88f;
+    color: #ccf;
+  }
+
+  /* Main content — side by side */
+  #main-content {
+    display: flex;
+    width: 95vw;
+    max-width: 1400px;
+    gap: 8px;
+  }
+  #heatmap-panel {
+    flex: 0 0 55%;
+    overflow: auto;
+    max-height: min(80vh, 800px);
+  }
+  #curve-panel {
+    flex: 0 0 44%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  #curve-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #888;
+    flex-wrap: wrap;
+  }
+  #curve-header .curve-toggle { display: flex; gap: 0.3rem; }
+  #curve-info { color: #aaa; min-width: 180px; }
+  #curve-canvas {
+    width: 100%;
+    flex: 1;
+    min-height: 200px;
+  }
+
   canvas {
     display: block;
     image-rendering: pixelated;
@@ -86,6 +132,72 @@
     display: none;
     z-index: 5;
   }
+
+  /* Settings tab */
+  #tab-settings {
+    display: none;
+    width: 95vw;
+    max-width: 1400px;
+    gap: 16px;
+  }
+  #tab-settings.visible {
+    display: flex;
+  }
+  #settings-form {
+    flex: 0 0 45%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #settings-preview {
+    flex: 0 0 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .vertebra-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+  }
+  .vertebra-row label {
+    width: 40px;
+    color: #aaa;
+    font-weight: bold;
+  }
+  .vertebra-row input {
+    width: 55px;
+    background: #1f2b47;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 3px 6px;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+  .vertebra-row input.invalid {
+    border-color: #f66;
+    background: #3a1a1a;
+  }
+  .vertebra-row select {
+    background: #1f2b47;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 3px 6px;
+    font-size: 0.75rem;
+  }
+  #settings-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  #settings-status {
+    font-size: 0.75rem;
+    color: #8f8;
+    min-height: 1.2em;
+  }
 </style>
 </head>
 <body>
@@ -96,6 +208,7 @@
   <span id="status-text">Connecting...</span>
   &nbsp;|&nbsp; Scan: <span id="hz">--</span> Hz
   &nbsp;|&nbsp; Active: <span id="pressed">0</span>/<span id="total">0</span>
+  &nbsp;|&nbsp; <span id="nearest-vertebra"></span>
 </div>
 
 <div id="controls">
@@ -109,10 +222,52 @@
     <input type="range" id="noise-slider" min="0" max="1000" value="200" step="25"
            oninput="setNoiseFloor(this.value)">
   </label>
+  <label style="cursor:pointer">
+    <input type="checkbox" id="show-regions" checked onchange="if(latestData)drawGrid(latestData)">
+    Show Vertebra Regions
+  </label>
 </div>
 
-<div id="grid-wrapper">
-  <canvas id="grid-canvas"></canvas>
+<div id="tab-bar">
+  <button class="tab-active" onclick="switchTab('data')">Data Collection</button>
+  <button onclick="switchTab('settings')">Vertebra Settings</button>
+</div>
+
+<!-- Tab: Data Collection -->
+<div id="tab-data">
+  <div id="main-content">
+    <div id="heatmap-panel">
+      <canvas id="grid-canvas"></canvas>
+    </div>
+    <div id="curve-panel">
+      <div id="curve-header">
+        <span id="curve-info">Peak: -- | ADC: --</span>
+        <button id="btn-record" onclick="toggleRecording()">Record</button>
+        <div class="curve-toggle">
+          <button id="btn-amplitude" class="active" onclick="setCurveMode('amplitude')">Amplitude</button>
+          <button id="btn-displacement" onclick="setCurveMode('displacement')">Displacement</button>
+        </div>
+      </div>
+      <canvas id="curve-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Vertebra Settings -->
+<div id="tab-settings">
+  <div id="settings-form">
+    <div style="font-size:0.9rem; color:#aaa; margin-bottom:4px;">Vertebra Positions (row, col, extent)</div>
+    <div id="vertebra-inputs"></div>
+    <div id="settings-buttons">
+      <button onclick="saveVertebraSettings()">Save Settings</button>
+      <button onclick="resetVertebraDefaults()">Reset to Defaults</button>
+    </div>
+    <div id="settings-status"></div>
+  </div>
+  <div id="settings-preview">
+    <div style="font-size:0.8rem; color:#888; margin-bottom:4px;">Preview</div>
+    <canvas id="preview-canvas"></canvas>
+  </div>
 </div>
 
 <div id="calibrating-overlay">Calibrating baseline...</div>
@@ -130,25 +285,55 @@ const overlay = document.getElementById('calibrating-overlay');
 const tooltip = document.getElementById('tooltip');
 
 // Physical PCB trace pitch
-// Row pitch: 3mm trace + 1mm gap = 4mm  (rows run horizontally on mat)
-// Col pitch: 4mm trace + 1mm gap = 5mm  (cols run vertically on mat)
 const LABEL_W = 28;
 const LABEL_H = 18;
-const ROW_PITCH = 4;  // mm — mapped to screen X axis
-const COL_PITCH = 5;  // mm — mapped to screen Y axis
-let cellW = 12;  // one row cell width on screen
-let cellH = 15;  // one col cell height on screen
+const ROW_PITCH = 4;
+const COL_PITCH = 5;
+let cellW = 12;
+let cellH = 15;
 
-// Display is TRANSPOSED to match physical mat:
-//   Screen X axis (left→right) = Rows (R39→R0)   = physical left→right
-//   Screen Y axis (top→bottom) = Cols (C29→C0)    = physical top→bottom
-// So canvas is ROWS wide × COLS tall
+// ── Force Curve Globals ──
+let recording = false;
+let curveMode = 'amplitude';
+const CURVE_MAX_SAMPLES = 900;
+let curveBuffer = [];
+let curveStartTime = 0;
+const curveCanvas = document.getElementById('curve-canvas');
+const curveCtx = curveCanvas.getContext('2d');
 
+// ── Vertebra Settings ──
+const VERTEBRA_DEFAULTS = {
+  L1C: {row:4, col:5, ext:1},
+  L2C: {row:7, col:5, ext:1},
+  L3C: {row:9, col:5, ext:2},
+  L4C: {row:13, col:5, ext:2},
+  L5C: {row:17, col:5, ext:2},
+};
+let vertebraSettings = {};
+// Deep copy defaults as initial
+for (const k in VERTEBRA_DEFAULTS) vertebraSettings[k] = Object.assign({}, VERTEBRA_DEFAULTS[k]);
+
+// ── Tab Switching ──
+function switchTab(tab) {
+  const buttons = document.querySelectorAll('#tab-bar button');
+  buttons[0].className = tab === 'data' ? 'tab-active' : '';
+  buttons[1].className = tab === 'settings' ? 'tab-active' : '';
+  document.getElementById('tab-data').style.display = tab === 'data' ? '' : 'none';
+  const settingsEl = document.getElementById('tab-settings');
+  if (tab === 'settings') {
+    settingsEl.classList.add('visible');
+    drawPreviewCanvas();
+  } else {
+    settingsEl.classList.remove('visible');
+  }
+}
+
+// ── Resize ──
 function resizeCanvas() {
-  const maxW = Math.min(window.innerWidth * 0.95, 1200);
+  const panel = document.getElementById('heatmap-panel');
+  const maxW = panel.clientWidth || Math.min(window.innerWidth * 0.52, 770);
   const maxH = Math.min(window.innerHeight * 0.72, 800);
 
-  // ROWS on X axis, COLS on Y axis
   const scaleW = (maxW - LABEL_W) / (ROWS * ROW_PITCH);
   const scaleH = (maxH - LABEL_H) / (COLS * COL_PITCH);
   const scale = Math.min(scaleW, scaleH);
@@ -160,8 +345,22 @@ function resizeCanvas() {
   canvas.height = LABEL_H + COLS * cellH;
   canvas.style.width = canvas.width + 'px';
   canvas.style.height = canvas.height + 'px';
+
+  resizeCurveCanvas();
 }
 
+function resizeCurveCanvas() {
+  const panel = document.getElementById('curve-panel');
+  const w = panel.clientWidth || 400;
+  const h = Math.max(200, canvas.height || 300);
+  curveCanvas.width = w;
+  curveCanvas.height = h;
+  curveCanvas.style.width = w + 'px';
+  curveCanvas.style.height = h + 'px';
+  drawCurve();
+}
+
+// ── Heatmap Drawing ──
 function drawGrid(data) {
   const grid = mode === 'raw' ? data.raw : data.grid;
   const maxV = mode === 'raw' ? 4095 : 3500;
@@ -175,7 +374,7 @@ function drawGrid(data) {
   ctx.textBaseline = 'middle';
   for (let sx = 0; sx < ROWS; sx++) {
     const x = LABEL_W + sx * cellW + cellW / 2;
-    const rowIdx = ROWS - 1 - sx;  // R39 at left
+    const rowIdx = ROWS - 1 - sx;
     const step = cellW < 10 ? 5 : 1;
     if (rowIdx % step === 0) {
       ctx.fillText(rowIdx, x, LABEL_H / 2);
@@ -186,17 +385,14 @@ function drawGrid(data) {
   ctx.textAlign = 'right';
   for (let sy = 0; sy < COLS; sy++) {
     const y = LABEL_H + sy * cellH + cellH / 2;
-    const colIdx = COLS - 1 - sy;  // C29 at top
+    const colIdx = COLS - 1 - sy;
     const step = cellH < 10 ? 5 : 1;
     if (colIdx % step === 0) {
       ctx.fillText(colIdx, LABEL_W - 3, y);
     }
   }
 
-  // Draw cells — transposed and flipped
-  // Screen (sx, sy) → data grid[row][col]
-  //   row = ROWS - 1 - sx   (R39 at left, R0 at right)
-  //   col = COLS - 1 - sy   (C29 at top, C0 at bottom)
+  // Draw cells
   for (let sy = 0; sy < COLS; sy++) {
     for (let sx = 0; sx < ROWS; sx++) {
       const row = ROWS - 1 - sx;
@@ -211,7 +407,6 @@ function drawGrid(data) {
       ctx.fillStyle = `rgb(${b},${b},${b})`;
       ctx.fillRect(x, y, cellW - 1, cellH - 1);
 
-      // Show value text only if cells are large enough
       if (cellW >= 22 && cellH >= 14) {
         ctx.fillStyle = b < 128 ? '#ff6666' : '#cc0000';
         ctx.font = `${Math.min(10, cellW - 4)}px monospace`;
@@ -221,8 +416,393 @@ function drawGrid(data) {
       }
     }
   }
+
+  // Draw vertebra region overlays
+  if (document.getElementById('show-regions').checked) {
+    drawVertebraRegions();
+  }
 }
 
+// ── Task 3: Red Bounding Boxes on Heatmap ──
+function drawVertebraRegions() {
+  const settings = vertebraSettings;
+  const labels = Object.keys(settings).sort();
+  for (const label of labels) {
+    const v = settings[label];
+    const row = v.row, col = v.col, ext = v.ext;
+    // Skip disabled vertebrae (0,0)
+    if (row === 0 && col === 0) continue;
+
+    // Transposition math: data (row, col, ext) -> screen pixels
+    // Screen X: row maps to sx = ROWS - 1 - row, ext extends leftward (toward higher row indices on screen left)
+    const px = LABEL_W + (ROWS - row - ext) * cellW;
+    const py = LABEL_H + (COLS - col - ext) * cellH;
+    const pw = ext * cellW;
+    const ph = ext * cellH;
+
+    ctx.strokeStyle = '#ff3333';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, pw, ph);
+
+    // Label above box
+    ctx.fillStyle = '#ff3333';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, px + pw / 2, py - 2);
+  }
+}
+
+// ── Task 3: Nearest Vertebra ──
+function updateNearestVertebra(data) {
+  const grid = mode === 'raw' ? data.raw : data.grid;
+  let peakVal = 0, peakRow = 0, peakCol = 0;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const val = grid[r] ? (grid[r][c] || 0) : 0;
+      if (val > peakVal) {
+        peakVal = val;
+        peakRow = r;
+        peakCol = c;
+      }
+    }
+  }
+
+  const el = document.getElementById('nearest-vertebra');
+  if (peakVal <= 0) {
+    el.textContent = '';
+    return;
+  }
+
+  let nearest = '', minDist = Infinity;
+  const settings = vertebraSettings;
+  for (const label in settings) {
+    const v = settings[label];
+    if (v.row === 0 && v.col === 0) continue;
+    const cr = v.row + (v.ext - 1) / 2;
+    const cc = v.col + (v.ext - 1) / 2;
+    const dist = Math.sqrt((peakRow - cr) ** 2 + (peakCol - cc) ** 2);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = label;
+    }
+  }
+  if (nearest) {
+    el.textContent = `Peak near: ${nearest} | ADC: ${peakVal}`;
+  } else {
+    el.textContent = `Peak: R${peakRow} C${peakCol} | ADC: ${peakVal}`;
+  }
+}
+
+// ── Force Curve ──
+function toggleRecording() {
+  recording = !recording;
+  const btn = document.getElementById('btn-record');
+  if (recording) {
+    curveBuffer = [];
+    curveStartTime = performance.now();
+    btn.textContent = 'Stop';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = 'Record';
+    btn.classList.remove('active');
+  }
+}
+
+function setCurveMode(m) {
+  curveMode = m;
+  document.getElementById('btn-amplitude').className = m === 'amplitude' ? 'active' : '';
+  document.getElementById('btn-displacement').className = m === 'displacement' ? 'active' : '';
+  drawCurve();
+}
+
+function updateCurve(data) {
+  const grid = mode === 'raw' ? data.raw : data.grid;
+  let peakVal = 0, peakRow = 0, peakCol = 0;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const val = grid[r] ? (grid[r][c] || 0) : 0;
+      if (val > peakVal) {
+        peakVal = val;
+        peakRow = r;
+        peakCol = c;
+      }
+    }
+  }
+
+  const elapsed = (performance.now() - curveStartTime) / 1000;
+  curveBuffer.push({time: elapsed, value: peakVal, row: peakRow, col: peakCol});
+
+  // Trim to 30s window
+  while (curveBuffer.length > 0 && (elapsed - curveBuffer[0].time) > 30) {
+    curveBuffer.shift();
+  }
+  // Also cap sample count
+  if (curveBuffer.length > CURVE_MAX_SAMPLES) {
+    curveBuffer.shift();
+  }
+
+  // Update info
+  document.getElementById('curve-info').textContent =
+    `Peak: R${peakRow} C${peakCol} | ADC: ${peakVal}`;
+}
+
+function drawCurve() {
+  const w = curveCanvas.width;
+  const h = curveCanvas.height;
+  if (w === 0 || h === 0) return;
+
+  const pad = {top: 10, right: 10, bottom: 24, left: 46};
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  curveCtx.clearRect(0, 0, w, h);
+  curveCtx.fillStyle = '#141428';
+  curveCtx.fillRect(0, 0, w, h);
+
+  const yForVal = (v) => {
+    const norm = v / 4095;
+    return curveMode === 'displacement'
+      ? pad.top + norm * plotH
+      : pad.top + plotH - norm * plotH;
+  };
+
+  // Y-axis grid lines and labels
+  curveCtx.strokeStyle = '#222';
+  curveCtx.lineWidth = 1;
+  for (let v = 0; v <= 4095; v += 1000) {
+    const gy = yForVal(v);
+    curveCtx.beginPath();
+    curveCtx.moveTo(pad.left, gy);
+    curveCtx.lineTo(pad.left + plotW, gy);
+    curveCtx.stroke();
+    curveCtx.fillStyle = '#555';
+    curveCtx.font = '10px monospace';
+    curveCtx.textAlign = 'right';
+    curveCtx.textBaseline = 'middle';
+    curveCtx.fillText(v, pad.left - 4, gy);
+  }
+
+  // Threshold lines
+  curveCtx.setLineDash([5, 4]);
+  // Yellow at 1000
+  curveCtx.strokeStyle = 'rgba(255,193,7,0.6)';
+  curveCtx.lineWidth = 1;
+  curveCtx.beginPath();
+  curveCtx.moveTo(pad.left, yForVal(1000));
+  curveCtx.lineTo(pad.left + plotW, yForVal(1000));
+  curveCtx.stroke();
+  // Red at 2500
+  curveCtx.strokeStyle = 'rgba(220,53,69,0.7)';
+  curveCtx.beginPath();
+  curveCtx.moveTo(pad.left, yForVal(2500));
+  curveCtx.lineTo(pad.left + plotW, yForVal(2500));
+  curveCtx.stroke();
+  curveCtx.setLineDash([]);
+
+  if (curveBuffer.length < 2) {
+    // X label
+    curveCtx.fillStyle = '#555';
+    curveCtx.font = '10px sans-serif';
+    curveCtx.textAlign = 'center';
+    curveCtx.fillText(recording ? 'Waiting for data...' : 'Click Record to start', pad.left + plotW / 2, h - 3);
+    return;
+  }
+
+  // Time window: last 30s
+  const tEnd = curveBuffer[curveBuffer.length - 1].time;
+  const tStart = Math.max(0, tEnd - 30);
+
+  // X-axis time labels every 5s
+  curveCtx.fillStyle = '#555';
+  curveCtx.font = '10px monospace';
+  curveCtx.textAlign = 'center';
+  curveCtx.textBaseline = 'top';
+  const firstTick = Math.ceil(tStart / 5) * 5;
+  for (let t = firstTick; t <= tEnd; t += 5) {
+    const xPos = pad.left + ((t - tStart) / 30) * plotW;
+    curveCtx.fillText(t.toFixed(0) + 's', xPos, pad.top + plotH + 4);
+    curveCtx.strokeStyle = '#1a1a3a';
+    curveCtx.lineWidth = 1;
+    curveCtx.beginPath();
+    curveCtx.moveTo(xPos, pad.top);
+    curveCtx.lineTo(xPos, pad.top + plotH);
+    curveCtx.stroke();
+  }
+
+  // Draw data line
+  curveCtx.beginPath();
+  let first = true;
+  for (const pt of curveBuffer) {
+    if (pt.time < tStart) continue;
+    const x = pad.left + ((pt.time - tStart) / 30) * plotW;
+    const y = yForVal(pt.value);
+    if (first) { curveCtx.moveTo(x, y); first = false; }
+    else curveCtx.lineTo(x, y);
+  }
+  curveCtx.strokeStyle = '#4a90d9';
+  curveCtx.lineWidth = 2;
+  curveCtx.stroke();
+}
+
+// ── Vertebra Settings Tab ──
+function buildVertebraInputs() {
+  const container = document.getElementById('vertebra-inputs');
+  container.innerHTML = '';
+  const labels = Object.keys(vertebraSettings).sort();
+  for (const label of labels) {
+    const v = vertebraSettings[label];
+    const div = document.createElement('div');
+    div.className = 'vertebra-row';
+    div.innerHTML = `
+      <label>${label}</label>
+      Row: <input type="number" id="v-${label}-row" min="0" max="39" value="${v.row}" oninput="validateAndPreview()">
+      Col: <input type="number" id="v-${label}-col" min="0" max="29" value="${v.col}" oninput="validateAndPreview()">
+      Ext: <select id="v-${label}-ext" onchange="validateAndPreview()">
+        <option value="1" ${v.ext===1?'selected':''}>1</option>
+        <option value="2" ${v.ext===2?'selected':''}>2</option>
+        <option value="3" ${v.ext===3?'selected':''}>3</option>
+      </select>
+    `;
+    container.appendChild(div);
+  }
+}
+
+function readVertebraInputs() {
+  const result = {};
+  const labels = Object.keys(vertebraSettings).sort();
+  for (const label of labels) {
+    const row = parseInt(document.getElementById(`v-${label}-row`).value) || 0;
+    const col = parseInt(document.getElementById(`v-${label}-col`).value) || 0;
+    const ext = parseInt(document.getElementById(`v-${label}-ext`).value) || 1;
+    result[label] = {row, col, ext};
+  }
+  return result;
+}
+
+function validateAndPreview() {
+  const labels = Object.keys(vertebraSettings).sort();
+  let allValid = true;
+  for (const label of labels) {
+    const rowInput = document.getElementById(`v-${label}-row`);
+    const colInput = document.getElementById(`v-${label}-col`);
+    const row = parseInt(rowInput.value) || 0;
+    const col = parseInt(colInput.value) || 0;
+    const ext = parseInt(document.getElementById(`v-${label}-ext`).value) || 1;
+
+    const rowValid = (row + ext - 1) <= 39;
+    const colValid = (col + ext - 1) <= 29;
+
+    rowInput.className = rowValid ? '' : 'invalid';
+    colInput.className = colValid ? '' : 'invalid';
+    if (!rowValid || !colValid) allValid = false;
+  }
+  drawPreviewCanvas();
+  return allValid;
+}
+
+function saveVertebraSettings() {
+  if (!validateAndPreview()) {
+    document.getElementById('settings-status').textContent = 'Fix validation errors first!';
+    document.getElementById('settings-status').style.color = '#f66';
+    return;
+  }
+  const settings = readVertebraInputs();
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({action: 'save_vertebra_settings', settings}));
+  }
+}
+
+function resetVertebraDefaults() {
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({action: 'reset_vertebra_settings'}));
+  }
+}
+
+function applyVertebraSettings(settings) {
+  vertebraSettings = settings;
+  // Update inputs if settings tab is visible
+  if (document.getElementById('tab-settings').classList.contains('visible')) {
+    buildVertebraInputs();
+    drawPreviewCanvas();
+  }
+}
+
+function drawPreviewCanvas() {
+  const pCanvas = document.getElementById('preview-canvas');
+  const pCtx = pCanvas.getContext('2d');
+
+  // Size the preview: fit nicely
+  const previewCellW = 10;
+  const previewCellH = 12;
+  const pLabelW = 22;
+  const pLabelH = 14;
+  pCanvas.width = pLabelW + ROWS * previewCellW;
+  pCanvas.height = pLabelH + COLS * previewCellH;
+  pCanvas.style.width = pCanvas.width + 'px';
+  pCanvas.style.height = pCanvas.height + 'px';
+
+  // Background
+  pCtx.fillStyle = '#222';
+  pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+
+  // Grid cells (gray)
+  for (let sy = 0; sy < COLS; sy++) {
+    for (let sx = 0; sx < ROWS; sx++) {
+      const x = pLabelW + sx * previewCellW;
+      const y = pLabelH + sy * previewCellH;
+      pCtx.fillStyle = '#333';
+      pCtx.fillRect(x, y, previewCellW - 1, previewCellH - 1);
+    }
+  }
+
+  // Row labels (every 5)
+  pCtx.fillStyle = '#666';
+  pCtx.font = '8px monospace';
+  pCtx.textAlign = 'center';
+  pCtx.textBaseline = 'middle';
+  for (let sx = 0; sx < ROWS; sx += 5) {
+    const rowIdx = ROWS - 1 - sx;
+    pCtx.fillText(rowIdx, pLabelW + sx * previewCellW + previewCellW / 2, pLabelH / 2);
+  }
+  pCtx.textAlign = 'right';
+  for (let sy = 0; sy < COLS; sy += 5) {
+    const colIdx = COLS - 1 - sy;
+    pCtx.fillText(colIdx, pLabelW - 2, pLabelH + sy * previewCellH + previewCellH / 2);
+  }
+
+  // Read current input values for preview
+  let settings;
+  try {
+    settings = readVertebraInputs();
+  } catch (e) {
+    settings = vertebraSettings;
+  }
+
+  // Draw vertebra boxes
+  const labels = Object.keys(settings).sort();
+  for (const label of labels) {
+    const v = settings[label];
+    if (v.row === 0 && v.col === 0) continue;
+
+    const px = pLabelW + (ROWS - v.row - v.ext) * previewCellW;
+    const py = pLabelH + (COLS - v.col - v.ext) * previewCellH;
+    const pw = v.ext * previewCellW;
+    const ph = v.ext * previewCellH;
+
+    pCtx.strokeStyle = '#ff3333';
+    pCtx.lineWidth = 2;
+    pCtx.strokeRect(px, py, pw, ph);
+
+    pCtx.fillStyle = '#ff3333';
+    pCtx.font = 'bold 9px sans-serif';
+    pCtx.textAlign = 'center';
+    pCtx.textBaseline = 'bottom';
+    pCtx.fillText(label, px + pw / 2, py - 1);
+  }
+}
+
+// ── Mode/Calibrate/Noise ──
 function setMode(m) {
   mode = m;
   document.getElementById('btn-filtered').className = m === 'filtered' ? 'active' : '';
@@ -243,6 +823,7 @@ function setNoiseFloor(val) {
   }
 }
 
+// ── Update Display ──
 function updateDisplay(data) {
   latestData = data;
 
@@ -256,15 +837,29 @@ function updateDisplay(data) {
     resizeCanvas();
   }
 
+  // Apply vertebra settings from server
+  if (data.vertebra_settings) {
+    vertebraSettings = data.vertebra_settings;
+  }
+
   overlay.style.display = data.calibrating ? 'flex' : 'none';
   drawGrid(data);
+
+  // Force curve
+  if (recording) {
+    updateCurve(data);
+    drawCurve();
+  }
+
+  // Nearest vertebra
+  updateNearestVertebra(data);
 
   document.getElementById('hz').textContent = data.hz.toFixed(1);
   document.getElementById('pressed').textContent = data.pressed;
   document.getElementById('total').textContent = ROWS * COLS;
 }
 
-// Tooltip on hover — transposed coordinates
+// ── Tooltip ──
 canvas.addEventListener('mousemove', function(e) {
   if (!latestData) return;
   const rect = canvas.getBoundingClientRect();
@@ -293,18 +888,41 @@ canvas.addEventListener('mouseleave', function() {
   tooltip.style.display = 'none';
 });
 
+// ── WebSocket ──
 function connect() {
   const dot = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
   ws = new WebSocket('ws://localhost:8765');
   ws.onopen = () => { dot.className = 'connected'; txt.textContent = 'Connected'; };
-  ws.onmessage = (e) => updateDisplay(JSON.parse(e.data));
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'vertebra_settings_saved') {
+      applyVertebraSettings(msg.settings);
+      document.getElementById('settings-status').textContent = 'Settings saved!';
+      document.getElementById('settings-status').style.color = '#8f8';
+    } else if (msg.type === 'vertebra_settings_reset') {
+      applyVertebraSettings(msg.settings);
+      document.getElementById('settings-status').textContent = 'Reset to defaults!';
+      document.getElementById('settings-status').style.color = '#8f8';
+    } else if (msg.type === 'vertebra_settings_error') {
+      document.getElementById('settings-status').textContent = 'Error: ' + msg.error;
+      document.getElementById('settings-status').style.color = '#f66';
+    } else {
+      // Regular frame data (type === 'frame' or legacy frames without type)
+      updateDisplay(msg);
+    }
+  };
   ws.onclose = () => { dot.className = 'disconnected'; txt.textContent = 'Reconnecting...'; setTimeout(connect, 1000); };
   ws.onerror = () => ws.close();
 }
 
+// ── Init ──
+buildVertebraInputs();
 resizeCanvas();
-window.addEventListener('resize', () => { resizeCanvas(); if (latestData) drawGrid(latestData); });
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  if (latestData) drawGrid(latestData);
+});
 connect();
 </script>
 </body>

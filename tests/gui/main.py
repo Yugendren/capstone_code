@@ -42,6 +42,9 @@ class ApiHandler:
     def connect(self, port):
         return backend.connect(port)
 
+    def connect_debug(self):
+        return backend.connect_debug()
+
     def disconnect(self):
         return backend.disconnect()
 
@@ -130,6 +133,17 @@ class ApiHandler:
     def save_settings(self, data):
         backend.save_settings(data)
 
+    # Vertebra settings
+    def get_vertebra_settings(self):
+        return backend.vertebra_settings
+
+    def save_vertebra_settings(self, data):
+        backend.save_vertebra_settings(data)
+        return backend.vertebra_settings
+
+    def reset_vertebra_settings(self):
+        return backend.reset_vertebra_settings()
+
 
 def run_ws_loop():
     """Run the asyncio+WS event loop in a daemon thread."""
@@ -173,9 +187,7 @@ def main():
 
     window.events.closed += on_closed
 
-    # Use Edge WebView2 on Windows (modern rendering), fallback to default elsewhere
-    gui = "edgechromium" if sys.platform == "win32" else None
-    webview.start(gui=gui)
+    webview.start()
 
 
 if __name__ == "__main__":
