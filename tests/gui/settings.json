@@ -1,0 +1,12 @@
+{
+  "noise_floor": 375,
+  "cell_display": "force",
+  "countdown_delay": 3,
+  "alert_volume": 30,
+  "thresh_low": 1000,
+  "thresh_high": 2500,
+  "show_spine_overlay": false,
+  "show_axis_labels": true,
+  "last_port": "COM3",
+  "force_cal_enabled": true
+}

@@ -1,0 +1,426 @@
+2026-03-15 14:36:25,418 [INFO] Disconnected
+2026-03-15 14:40:31,517 [WARNING] Port 8765 in use, trying next...
+2026-03-15 14:40:31,517 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 14:40:31,530 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 14:46:36,620 [INFO] Disconnected
+2026-03-15 14:47:21,504 [WARNING] Port 8765 in use, trying next...
+2026-03-15 14:47:21,504 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 14:47:21,504 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 14:47:24,063 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 14:47:24,063 [INFO] Connected to COM3
+2026-03-15 14:47:24,096 [INFO] Frame 1: 17.8 Hz
+2026-03-15 14:47:24,104 [INFO] connection open
+2026-03-15 14:47:24,159 [INFO] Frame 2: 17.8 Hz
+2026-03-15 14:47:24,225 [INFO] Frame 3: 17.8 Hz
+2026-03-15 14:47:24,674 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 14:47:56,541 [INFO] Frame 500: 17.8 Hz
+2026-03-15 14:48:02,096 [INFO] Session started: Free Flow
+2026-03-15 14:48:22,196 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_144822_raw.csv
+2026-03-15 14:48:22,196 [INFO] Session stopped: 308 frames, 15.4 Hz, 20.0 s
+2026-03-15 14:48:29,042 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 14:48:46,387 [INFO] Session started: Free Flow
+2026-03-15 14:49:01,541 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 14:49:05,937 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_144905_raw.csv
+2026-03-15 14:49:05,937 [INFO] Session stopped: 301 frames, 15.5 Hz, 19.4 s
+2026-03-15 14:49:11,011 [INFO] Session started: Free Flow
+2026-03-15 14:49:31,720 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_144931_raw.csv
+2026-03-15 14:49:31,720 [INFO] Session stopped: 318 frames, 15.4 Hz, 20.6 s
+2026-03-15 14:49:34,044 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 14:50:06,544 [INFO] Frame 2500: 17.8 Hz
+2026-03-15 14:50:39,044 [INFO] Frame 3000: 17.8 Hz
+2026-03-15 14:51:11,544 [INFO] Frame 3500: 17.8 Hz
+2026-03-15 14:51:13,706 [INFO] Spine L4: R28 C0 (avg 569, 19 frames)
+2026-03-15 14:51:16,268 [INFO] Spine calibration saved: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\spine_calibration.json
+2026-03-15 14:51:44,167 [INFO] Frame 4000: 17.8 Hz
+2026-03-15 14:52:16,668 [INFO] Frame 4500: 17.8 Hz
+2026-03-15 14:52:49,167 [INFO] Frame 5000: 17.8 Hz
+2026-03-15 14:53:21,783 [INFO] Frame 5500: 17.8 Hz
+2026-03-15 14:53:54,289 [INFO] Frame 6000: 17.8 Hz
+2026-03-15 14:54:26,791 [INFO] Frame 6500: 17.8 Hz
+2026-03-15 14:54:59,292 [INFO] Frame 7000: 17.8 Hz
+2026-03-15 14:55:31,793 [INFO] Frame 7500: 17.8 Hz
+2026-03-15 14:56:04,409 [INFO] Frame 8000: 17.8 Hz
+2026-03-15 14:56:37,023 [INFO] Frame 8500: 17.8 Hz
+2026-03-15 14:57:09,527 [INFO] Frame 9000: 17.8 Hz
+2026-03-15 14:57:42,030 [INFO] Frame 9500: 17.8 Hz
+2026-03-15 14:58:14,644 [INFO] Frame 10000: 17.8 Hz
+2026-03-15 14:58:47,151 [INFO] Frame 10500: 17.8 Hz
+2026-03-15 14:59:19,653 [INFO] Frame 11000: 17.8 Hz
+2026-03-15 14:59:52,153 [INFO] Frame 11500: 17.8 Hz
+2026-03-15 15:00:24,658 [INFO] Frame 12000: 17.8 Hz
+2026-03-15 15:00:57,281 [INFO] Frame 12500: 17.8 Hz
+2026-03-15 15:01:29,786 [INFO] Frame 13000: 17.8 Hz
+2026-03-15 15:01:35,349 [INFO] Reader thread exiting
+2026-03-15 15:01:35,349 [INFO] Disconnected
+2026-03-15 15:01:41,319 [INFO] Spine calibration loaded: {'L4': [28, 0]}
+2026-03-15 15:01:41,347 [WARNING] Port 8765 in use, trying next...
+2026-03-15 15:01:41,348 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 15:01:41,348 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 15:01:44,039 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 15:01:44,040 [INFO] Connected to COM3
+2026-03-15 15:01:44,077 [INFO] Frame 1: 17.8 Hz
+2026-03-15 15:01:44,119 [INFO] connection open
+2026-03-15 15:01:44,142 [INFO] Frame 2: 17.8 Hz
+2026-03-15 15:01:44,208 [INFO] Frame 3: 17.8 Hz
+2026-03-15 15:01:44,662 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 15:02:14,060 [INFO] Session started: Free Flow
+2026-03-15 15:02:16,627 [INFO] Frame 500: 17.8 Hz
+2026-03-15 15:02:49,190 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 15:02:50,917 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_150250_raw.csv
+2026-03-15 15:02:50,918 [INFO] Session stopped: 565 frames, 15.4 Hz, 36.7 s
+2026-03-15 15:02:58,784 [INFO] Spine calibration saved: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\spine_calibration.json
+2026-03-15 15:03:05,939 [INFO] Session started: Free Flow
+2026-03-15 15:03:21,750 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 15:03:54,367 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 15:04:08,475 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_150408_raw.csv
+2026-03-15 15:04:08,475 [INFO] Session stopped: 955 frames, 15.3 Hz, 62.3 s
+2026-03-15 15:04:26,865 [INFO] Frame 2500: 17.8 Hz
+2026-03-15 15:04:59,367 [INFO] Frame 3000: 17.8 Hz
+2026-03-15 15:05:31,988 [INFO] Frame 3500: 17.8 Hz
+2026-03-15 15:06:04,488 [INFO] Frame 4000: 17.8 Hz
+2026-03-15 15:06:37,162 [INFO] Frame 4500: 17.8 Hz
+2026-03-15 15:07:09,662 [INFO] Frame 5000: 17.8 Hz
+2026-03-15 15:07:42,164 [INFO] Frame 5500: 17.8 Hz
+2026-03-15 15:08:14,784 [INFO] Frame 6000: 17.8 Hz
+2026-03-15 15:08:47,285 [INFO] Frame 6500: 17.8 Hz
+2026-03-15 15:09:19,786 [INFO] Frame 7000: 17.8 Hz
+2026-03-15 15:09:52,287 [INFO] Frame 7500: 17.8 Hz
+2026-03-15 15:10:24,789 [INFO] Frame 8000: 17.8 Hz
+2026-03-15 15:10:57,405 [INFO] Frame 8500: 17.8 Hz
+2026-03-15 15:11:29,909 [INFO] Frame 9000: 17.8 Hz
+2026-03-15 15:12:02,409 [INFO] Frame 9500: 17.8 Hz
+2026-03-15 15:12:26,189 [INFO] Reader thread exiting
+2026-03-15 15:12:26,190 [INFO] Disconnected
+2026-03-15 15:12:29,821 [INFO] Spine calibration loaded: {'L4': [28, 0]}
+2026-03-15 15:12:29,847 [WARNING] Port 8765 in use, trying next...
+2026-03-15 15:12:29,848 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 15:12:29,848 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 15:12:33,154 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 15:12:33,154 [INFO] Connected to COM3
+2026-03-15 15:12:33,188 [INFO] Frame 1: 17.8 Hz
+2026-03-15 15:12:33,252 [INFO] Frame 2: 17.8 Hz
+2026-03-15 15:12:33,318 [INFO] Frame 3: 17.8 Hz
+2026-03-15 15:12:33,413 [INFO] connection open
+2026-03-15 15:12:33,772 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 15:12:42,804 [INFO] Session started: Free Flow
+2026-03-15 15:13:05,737 [INFO] Frame 500: 17.8 Hz
+2026-03-15 15:13:08,807 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_151308_raw.csv
+2026-03-15 15:13:08,807 [INFO] Session stopped: 398 frames, 15.4 Hz, 25.9 s
+2026-03-15 15:13:38,357 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 15:13:57,090 [INFO] Spine calibration saved: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\spine_calibration.json
+2026-03-15 15:13:57,091 [INFO] Spine markers set: {'L1': [0, 24], 'L2': [0, 19], 'L3': [24, 5], 'L4': [37, 0], 'L5': [27, 0]}
+2026-03-15 15:14:10,857 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 15:14:43,357 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 15:15:15,858 [INFO] Frame 2500: 17.8 Hz
+2026-03-15 15:15:48,357 [INFO] Frame 3000: 17.8 Hz
+2026-03-15 15:16:20,858 [INFO] Frame 3500: 17.8 Hz
+2026-03-15 15:16:53,479 [INFO] Frame 4000: 17.8 Hz
+2026-03-15 15:17:25,982 [INFO] Frame 4500: 17.8 Hz
+2026-03-15 15:17:58,485 [INFO] Frame 5000: 17.8 Hz
+2026-03-15 15:18:31,103 [INFO] Frame 5500: 17.8 Hz
+2026-03-15 15:19:03,719 [INFO] Frame 6000: 17.8 Hz
+2026-03-15 15:19:36,455 [INFO] Frame 6500: 17.8 Hz
+2026-03-15 15:20:08,958 [INFO] Frame 7000: 17.8 Hz
+2026-03-15 15:20:41,462 [INFO] Frame 7500: 17.8 Hz
+2026-03-15 15:21:14,082 [INFO] Frame 8000: 17.8 Hz
+2026-03-15 15:21:46,707 [INFO] Frame 8500: 17.8 Hz
+2026-03-15 15:22:19,212 [INFO] Frame 9000: 17.8 Hz
+2026-03-15 15:22:51,715 [INFO] Frame 9500: 17.8 Hz
+2026-03-15 15:23:24,223 [INFO] Frame 10000: 17.8 Hz
+2026-03-15 15:23:56,838 [INFO] Frame 10500: 17.8 Hz
+2026-03-15 15:24:29,344 [INFO] Frame 11000: 17.8 Hz
+2026-03-15 15:25:01,846 [INFO] Frame 11500: 17.8 Hz
+2026-03-15 15:25:34,471 [INFO] Frame 12000: 17.8 Hz
+2026-03-15 15:26:06,974 [INFO] Frame 12500: 17.8 Hz
+2026-03-15 15:26:39,599 [INFO] Frame 13000: 17.8 Hz
+2026-03-15 15:27:12,103 [INFO] Frame 13500: 17.8 Hz
+2026-03-15 15:27:44,609 [INFO] Frame 14000: 17.8 Hz
+2026-03-15 15:28:17,113 [INFO] Frame 14500: 17.8 Hz
+2026-03-15 15:28:49,622 [INFO] Frame 15000: 17.8 Hz
+2026-03-15 15:29:22,242 [INFO] Frame 15500: 17.8 Hz
+2026-03-15 15:29:54,749 [INFO] Frame 16000: 17.8 Hz
+2026-03-15 15:30:27,253 [INFO] Frame 16500: 17.8 Hz
+2026-03-15 15:30:59,870 [INFO] Frame 17000: 17.8 Hz
+2026-03-15 15:31:32,377 [INFO] Frame 17500: 17.8 Hz
+2026-03-15 15:32:04,879 [INFO] Frame 18000: 17.8 Hz
+2026-03-15 15:32:37,381 [INFO] Frame 18500: 17.8 Hz
+2026-03-15 15:33:09,881 [INFO] Frame 19000: 17.8 Hz
+2026-03-15 15:33:42,502 [INFO] Frame 19500: 17.8 Hz
+2026-03-15 15:34:15,116 [INFO] Frame 20000: 17.8 Hz
+2026-03-15 15:34:47,616 [INFO] Frame 20500: 17.8 Hz
+2026-03-15 15:35:20,119 [INFO] Frame 21000: 17.8 Hz
+2026-03-15 15:35:52,623 [INFO] Frame 21500: 17.8 Hz
+2026-03-15 15:36:25,126 [INFO] Frame 22000: 17.8 Hz
+2026-03-15 15:36:57,744 [INFO] Frame 22500: 17.8 Hz
+2026-03-15 15:37:30,249 [INFO] Frame 23000: 17.8 Hz
+2026-03-15 15:38:02,754 [INFO] Frame 23500: 17.8 Hz
+2026-03-15 15:38:35,259 [INFO] Frame 24000: 17.8 Hz
+2026-03-15 15:39:07,764 [INFO] Frame 24500: 17.8 Hz
+2026-03-15 15:39:40,383 [INFO] Frame 25000: 17.8 Hz
+2026-03-15 15:40:13,005 [INFO] Frame 25500: 17.8 Hz
+2026-03-15 15:40:45,513 [INFO] Frame 26000: 17.8 Hz
+2026-03-15 15:41:18,130 [INFO] Frame 26500: 17.8 Hz
+2026-03-15 15:41:50,636 [INFO] Frame 27000: 17.8 Hz
+2026-03-15 15:42:23,140 [INFO] Frame 27500: 17.8 Hz
+2026-03-15 15:42:55,760 [INFO] Frame 28000: 17.8 Hz
+2026-03-15 15:43:28,261 [INFO] Frame 28500: 17.8 Hz
+2026-03-15 15:44:00,764 [INFO] Frame 29000: 17.8 Hz
+2026-03-15 15:44:33,268 [INFO] Frame 29500: 17.8 Hz
+2026-03-15 15:45:05,886 [INFO] Frame 30000: 17.8 Hz
+2026-03-15 15:45:38,387 [INFO] Frame 30500: 17.8 Hz
+2026-03-15 15:46:10,888 [INFO] Frame 31000: 17.8 Hz
+2026-03-15 15:46:43,390 [INFO] Frame 31500: 17.8 Hz
+2026-03-15 15:47:15,893 [INFO] Frame 32000: 17.8 Hz
+2026-03-15 15:47:48,398 [INFO] Frame 32500: 17.8 Hz
+2026-03-15 15:48:20,903 [INFO] Frame 33000: 17.8 Hz
+2026-03-15 15:48:53,407 [INFO] Frame 33500: 17.8 Hz
+2026-03-15 15:49:25,910 [INFO] Frame 34000: 17.8 Hz
+2026-03-15 15:49:58,413 [INFO] Frame 34500: 17.8 Hz
+2026-03-15 15:50:30,918 [INFO] Frame 35000: 17.8 Hz
+2026-03-15 15:51:03,418 [INFO] Frame 35500: 17.8 Hz
+2026-03-15 15:51:35,923 [INFO] Frame 36000: 17.8 Hz
+2026-03-15 15:52:08,429 [INFO] Frame 36500: 17.8 Hz
+2026-03-15 15:52:40,930 [INFO] Frame 37000: 17.8 Hz
+2026-03-15 15:53:13,432 [INFO] Frame 37500: 17.8 Hz
+2026-03-15 15:53:45,938 [INFO] Frame 38000: 17.8 Hz
+2026-03-15 15:54:18,444 [INFO] Frame 38500: 17.8 Hz
+2026-03-15 15:54:46,236 [INFO] Reader thread exiting
+2026-03-15 15:54:46,238 [INFO] Disconnected
+2026-03-15 15:54:53,629 [INFO] Spine calibration loaded: {'L1': [0, 24], 'L2': [0, 19], 'L3': [24, 5], 'L4': [37, 0], 'L5': [27, 0]}
+2026-03-15 15:54:53,656 [WARNING] Port 8765 in use, trying next...
+2026-03-15 15:54:53,656 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 15:54:53,656 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 15:54:56,405 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 15:54:56,405 [INFO] Connected to COM3
+2026-03-15 15:54:56,428 [INFO] Frame 1: 17.8 Hz
+2026-03-15 15:54:56,494 [INFO] Frame 2: 17.8 Hz
+2026-03-15 15:54:56,559 [INFO] Frame 3: 17.8 Hz
+2026-03-15 15:54:56,664 [INFO] connection open
+2026-03-15 15:54:57,013 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 15:55:28,981 [INFO] Frame 500: 17.8 Hz
+2026-03-15 15:56:01,656 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 15:56:34,104 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 15:57:06,608 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 15:57:39,223 [INFO] Frame 2500: 17.8 Hz
+2026-03-15 15:58:11,844 [INFO] Frame 3000: 17.8 Hz
+2026-03-15 15:58:44,468 [INFO] Frame 3500: 17.8 Hz
+2026-03-15 15:59:17,087 [INFO] Frame 4000: 17.8 Hz
+2026-03-15 15:59:49,590 [INFO] Frame 4500: 17.8 Hz
+2026-03-15 16:00:22,095 [INFO] Frame 5000: 17.8 Hz
+2026-03-15 16:00:54,605 [INFO] Frame 5500: 17.8 Hz
+2026-03-15 16:01:27,228 [INFO] Frame 6000: 17.8 Hz
+2026-03-15 16:01:59,844 [INFO] Frame 6500: 17.8 Hz
+2026-03-15 16:02:32,466 [INFO] Frame 7000: 17.8 Hz
+2026-03-15 16:03:04,971 [INFO] Frame 7500: 17.8 Hz
+2026-03-15 16:03:37,476 [INFO] Frame 8000: 17.8 Hz
+2026-03-15 16:04:09,985 [INFO] Frame 8500: 17.8 Hz
+2026-03-15 16:04:42,493 [INFO] Frame 9000: 17.8 Hz
+2026-03-15 16:05:15,001 [INFO] Frame 9500: 17.8 Hz
+2026-03-15 16:05:47,509 [INFO] Frame 10000: 17.8 Hz
+2026-03-15 16:06:20,010 [INFO] Frame 10500: 17.8 Hz
+2026-03-15 16:06:52,516 [INFO] Frame 11000: 17.8 Hz
+2026-03-15 16:07:25,024 [INFO] Frame 11500: 17.8 Hz
+2026-03-15 16:07:57,527 [INFO] Frame 12000: 17.8 Hz
+2026-03-15 16:08:30,143 [INFO] Frame 12500: 17.8 Hz
+2026-03-15 16:09:02,649 [INFO] Frame 13000: 17.8 Hz
+2026-03-15 16:09:35,150 [INFO] Frame 13500: 17.8 Hz
+2026-03-15 16:10:07,763 [INFO] Frame 14000: 17.8 Hz
+2026-03-15 16:10:40,386 [INFO] Frame 14500: 17.8 Hz
+2026-03-15 16:11:13,001 [INFO] Frame 15000: 17.8 Hz
+2026-03-15 16:11:45,503 [INFO] Frame 15500: 17.8 Hz
+2026-03-15 16:12:18,006 [INFO] Frame 16000: 17.8 Hz
+2026-03-15 16:12:50,506 [INFO] Frame 16500: 17.8 Hz
+2026-03-15 16:13:23,007 [INFO] Frame 17000: 17.8 Hz
+2026-03-15 16:13:55,511 [INFO] Frame 17500: 17.8 Hz
+2026-03-15 16:14:28,128 [INFO] Frame 18000: 17.8 Hz
+2026-03-15 16:15:00,633 [INFO] Frame 18500: 17.8 Hz
+2026-03-15 16:15:33,257 [INFO] Frame 19000: 17.8 Hz
+2026-03-15 16:16:05,871 [INFO] Frame 19500: 17.8 Hz
+2026-03-15 16:16:38,371 [INFO] Frame 20000: 17.8 Hz
+2026-03-15 16:17:10,872 [INFO] Frame 20500: 17.8 Hz
+2026-03-15 16:17:43,494 [INFO] Frame 21000: 17.8 Hz
+2026-03-15 16:18:16,002 [INFO] Frame 21500: 17.8 Hz
+2026-03-15 16:18:48,631 [INFO] Frame 22000: 17.8 Hz
+2026-03-15 16:19:21,134 [INFO] Frame 22500: 17.8 Hz
+2026-03-15 16:19:53,644 [INFO] Frame 23000: 17.8 Hz
+2026-03-15 16:20:26,264 [INFO] Frame 23500: 17.8 Hz
+2026-03-15 16:20:58,769 [INFO] Frame 24000: 17.8 Hz
+2026-03-15 16:21:31,390 [INFO] Frame 24500: 17.8 Hz
+2026-03-15 16:22:04,004 [INFO] Frame 25000: 17.8 Hz
+2026-03-15 16:22:36,566 [INFO] Frame 25500: 17.8 Hz
+2026-03-15 16:23:09,121 [INFO] Frame 26000: 17.8 Hz
+2026-03-15 16:23:41,628 [INFO] Frame 26500: 17.8 Hz
+2026-03-15 16:24:14,241 [INFO] Frame 27000: 17.8 Hz
+2026-03-15 16:24:46,749 [INFO] Frame 27500: 17.8 Hz
+2026-03-15 16:25:19,251 [INFO] Frame 28000: 17.8 Hz
+2026-03-15 16:25:51,752 [INFO] Frame 28500: 17.8 Hz
+2026-03-15 16:26:24,255 [INFO] Frame 29000: 17.8 Hz
+2026-03-15 16:26:56,811 [INFO] Frame 29500: 17.8 Hz
+2026-03-15 16:27:29,255 [INFO] Frame 30000: 17.8 Hz
+2026-03-15 16:28:01,756 [INFO] Frame 30500: 17.8 Hz
+2026-03-15 16:28:34,370 [INFO] Frame 31000: 17.8 Hz
+2026-03-15 16:29:06,991 [INFO] Frame 31500: 17.8 Hz
+2026-03-15 16:29:36,562 [INFO] Reader thread exiting
+2026-03-15 16:29:36,563 [INFO] Disconnected
+2026-03-15 16:29:40,633 [INFO] Spine calibration loaded: {'L1': [0, 24], 'L2': [0, 19], 'L3': [24, 5], 'L4': [37, 0], 'L5': [27, 0]}
+2026-03-15 16:29:40,660 [WARNING] Port 8765 in use, trying next...
+2026-03-15 16:29:40,660 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 16:29:40,660 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 16:29:43,281 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 16:29:43,281 [INFO] Connected to COM3
+2026-03-15 16:29:43,331 [INFO] Frame 1: 17.8 Hz
+2026-03-15 16:29:43,397 [INFO] Frame 2: 17.8 Hz
+2026-03-15 16:29:43,462 [INFO] Frame 3: 17.8 Hz
+2026-03-15 16:29:43,552 [INFO] connection open
+2026-03-15 16:29:43,917 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 16:29:59,256 [INFO] Force capture: peak R20 C7 ADC=1928 (30 frames)
+2026-03-15 16:30:08,334 [INFO] Force capture: peak R30 C28 ADC=2567 (31 frames)
+2026-03-15 16:30:15,767 [INFO] Frame 500: 17.8 Hz
+2026-03-15 16:30:16,514 [INFO] Force capture: peak R5 C23 ADC=1287 (31 frames)
+2026-03-15 16:30:23,323 [INFO] Force capture: peak R30 C5 ADC=3126 (28 frames)
+2026-03-15 16:30:31,383 [INFO] Force capture: peak R12 C2 ADC=1960 (31 frames)
+2026-03-15 16:30:34,539 [INFO] Force calibration saved: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\force_calibration.json
+2026-03-15 16:30:34,539 [INFO] Force gain map computed: 5 refs, weight=300.0g
+2026-03-15 16:30:48,443 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 16:31:20,944 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 16:31:53,446 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 16:32:25,951 [INFO] Frame 2500: 17.8 Hz
+2026-03-15 16:32:26,294 [INFO] Force capture: peak R20 C13 ADC=1778 (31 frames)
+2026-03-15 16:32:39,345 [INFO] Force capture: peak R28 C18 ADC=2070 (31 frames)
+2026-03-15 16:32:49,127 [INFO] Force capture: peak R2 C25 ADC=2698 (31 frames)
+2026-03-15 16:32:58,568 [INFO] Frame 3000: 17.8 Hz
+2026-03-15 16:32:59,532 [INFO] Force capture: peak R38 C3 ADC=2416 (31 frames)
+2026-03-15 16:33:15,479 [INFO] Force capture: peak R3 C4 ADC=1521 (31 frames)
+2026-03-15 16:33:17,484 [INFO] Force calibration saved: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\force_calibration.json
+2026-03-15 16:33:17,486 [INFO] Force gain map computed: 5 refs, weight=300.0g
+2026-03-15 16:33:31,069 [INFO] Frame 3500: 17.8 Hz
+2026-03-15 16:34:03,571 [INFO] Frame 4000: 17.8 Hz
+2026-03-15 16:34:36,186 [INFO] Frame 4500: 17.8 Hz
+2026-03-15 16:34:53,917 [INFO] Session started: Free Flow
+2026-03-15 16:35:08,682 [INFO] Frame 5000: 17.8 Hz
+2026-03-15 16:35:35,886 [INFO] Force CSV written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_163535_force.csv
+2026-03-15 16:35:35,886 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_163535_raw.csv
+2026-03-15 16:35:35,886 [INFO] Session stopped: 639 frames, 15.4 Hz, 41.5 s
+2026-03-15 16:35:41,189 [INFO] Frame 5500: 17.8 Hz
+2026-03-15 16:36:13,689 [INFO] Frame 6000: 17.8 Hz
+2026-03-15 16:36:46,306 [INFO] Frame 6500: 17.8 Hz
+2026-03-15 16:37:18,806 [INFO] Frame 7000: 17.8 Hz
+2026-03-15 16:37:51,305 [INFO] Frame 7500: 17.8 Hz
+2026-03-15 16:38:23,804 [INFO] Frame 8000: 17.8 Hz
+2026-03-15 16:38:56,305 [INFO] Frame 8500: 17.8 Hz
+2026-03-15 16:39:28,808 [INFO] Frame 9000: 17.8 Hz
+2026-03-15 16:40:01,309 [INFO] Frame 9500: 17.8 Hz
+2026-03-15 16:40:33,922 [INFO] Frame 10000: 17.8 Hz
+2026-03-15 16:41:06,425 [INFO] Frame 10500: 17.8 Hz
+2026-03-15 16:41:38,929 [INFO] Frame 11000: 17.8 Hz
+2026-03-15 16:42:11,550 [INFO] Frame 11500: 17.8 Hz
+2026-03-15 16:42:44,054 [INFO] Frame 12000: 17.8 Hz
+2026-03-15 16:43:16,555 [INFO] Frame 12500: 17.8 Hz
+2026-03-15 16:43:49,059 [INFO] Frame 13000: 17.8 Hz
+2026-03-15 16:44:21,559 [INFO] Frame 13500: 17.8 Hz
+2026-03-15 16:44:54,062 [INFO] Frame 14000: 17.8 Hz
+2026-03-15 16:45:26,564 [INFO] Frame 14500: 17.8 Hz
+2026-03-15 16:45:59,065 [INFO] Frame 15000: 17.8 Hz
+2026-03-15 16:46:31,566 [INFO] Frame 15500: 17.8 Hz
+2026-03-15 16:47:04,181 [INFO] Frame 16000: 17.8 Hz
+2026-03-15 16:47:36,800 [INFO] Frame 16500: 17.8 Hz
+2026-03-15 16:48:09,301 [INFO] Frame 17000: 17.8 Hz
+2026-03-15 16:48:41,920 [INFO] Frame 17500: 17.8 Hz
+2026-03-15 16:49:14,420 [INFO] Frame 18000: 17.8 Hz
+2026-03-15 16:49:46,922 [INFO] Frame 18500: 17.8 Hz
+2026-03-15 16:50:19,425 [INFO] Frame 19000: 17.8 Hz
+2026-03-15 16:50:51,926 [INFO] Frame 19500: 17.8 Hz
+2026-03-15 16:51:24,429 [INFO] Frame 20000: 17.8 Hz
+2026-03-15 16:51:57,053 [INFO] Frame 20500: 17.8 Hz
+2026-03-15 16:52:29,556 [INFO] Frame 21000: 17.8 Hz
+2026-03-15 16:53:02,063 [INFO] Frame 21500: 17.8 Hz
+2026-03-15 16:53:34,679 [INFO] Frame 22000: 17.8 Hz
+2026-03-15 16:54:07,184 [INFO] Frame 22500: 17.8 Hz
+2026-03-15 16:54:39,687 [INFO] Frame 23000: 17.8 Hz
+2026-03-15 16:54:55,116 [INFO] Reader thread exiting
+2026-03-15 16:54:55,117 [INFO] Disconnected
+2026-03-15 16:54:59,501 [INFO] Force calibration loaded: 300g, 5 refs
+2026-03-15 16:54:59,524 [WARNING] Port 8765 in use, trying next...
+2026-03-15 16:54:59,524 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 16:54:59,524 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 16:55:02,125 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 16:55:02,126 [INFO] Connected to COM3
+2026-03-15 16:55:02,157 [INFO] Frame 1: 17.8 Hz
+2026-03-15 16:55:02,221 [INFO] Frame 2: 17.8 Hz
+2026-03-15 16:55:02,286 [INFO] Frame 3: 17.8 Hz
+2026-03-15 16:55:02,406 [INFO] connection open
+2026-03-15 16:55:02,742 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 16:55:10,414 [INFO] Session started: Free Flow
+2026-03-15 16:55:28,116 [INFO] Force CSV written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_165527_force.csv
+2026-03-15 16:55:28,116 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_165527_raw.csv
+2026-03-15 16:55:28,116 [INFO] Session stopped: 269 frames, 15.4 Hz, 17.5 s
+2026-03-15 16:55:34,593 [INFO] Frame 500: 17.8 Hz
+2026-03-15 16:56:07,150 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 16:56:39,595 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 16:57:12,095 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 16:57:41,772 [INFO] Reader thread exiting
+2026-03-15 16:57:41,773 [INFO] Disconnected
+2026-03-15 17:12:43,630 [INFO] Force calibration loaded: 300g, 5 refs
+2026-03-15 17:12:43,649 [WARNING] Port 8765 in use, trying next...
+2026-03-15 17:12:43,649 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 17:12:43,649 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 17:12:49,522 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 17:12:49,523 [INFO] Connected to COM3
+2026-03-15 17:12:49,531 [INFO] Frame 1: 17.8 Hz
+2026-03-15 17:12:49,596 [INFO] Frame 2: 17.8 Hz
+2026-03-15 17:12:49,661 [INFO] Frame 3: 17.8 Hz
+2026-03-15 17:12:49,754 [INFO] connection open
+2026-03-15 17:12:50,115 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 17:13:22,087 [INFO] Frame 500: 17.8 Hz
+2026-03-15 17:13:36,872 [INFO] Session started: Free Flow
+2026-03-15 17:13:54,587 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 17:14:27,091 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 17:14:59,600 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 17:15:21,405 [INFO] Recalibrating (WS command)
+2026-03-15 17:15:22,027 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 17:15:32,104 [INFO] Frame 2500: 17.8 Hz
+2026-03-15 17:16:04,605 [INFO] Frame 3000: 17.8 Hz
+2026-03-15 17:16:37,229 [INFO] Frame 3500: 17.8 Hz
+2026-03-15 17:17:09,732 [INFO] Frame 4000: 17.8 Hz
+2026-03-15 17:17:42,232 [INFO] Frame 4500: 17.8 Hz
+2026-03-15 17:18:14,733 [INFO] Frame 5000: 17.8 Hz
+2026-03-15 17:18:47,354 [INFO] Frame 5500: 17.8 Hz
+2026-03-15 17:18:54,083 [INFO] Recalibrating (WS command)
+2026-03-15 17:18:54,700 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 17:19:19,854 [INFO] Frame 6000: 17.8 Hz
+2026-03-15 17:19:45,442 [INFO] Reader thread exiting
+2026-03-15 17:19:45,442 [INFO] Disconnected
+2026-03-15 17:20:11,224 [INFO] Force calibration loaded: 300g, 5 refs
+2026-03-15 17:20:11,253 [WARNING] Port 8765 in use, trying next...
+2026-03-15 17:20:11,253 [INFO] server listening on 127.0.0.1:8766
+2026-03-15 17:20:11,253 [INFO] WebSocket server on ws://127.0.0.1:8766
+2026-03-15 17:20:12,104 [WARNING] Port 54351 is in use
+2026-03-15 17:20:18,357 [INFO] Binary reader: expecting 2408 byte frames
+2026-03-15 17:20:18,357 [INFO] Connected to COM3
+2026-03-15 17:20:18,395 [INFO] Frame 1: 17.8 Hz
+2026-03-15 17:20:18,397 [INFO] connection open
+2026-03-15 17:20:18,460 [INFO] Frame 2: 17.8 Hz
+2026-03-15 17:20:18,526 [INFO] Frame 3: 17.8 Hz
+2026-03-15 17:20:18,980 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 17:20:50,832 [INFO] Frame 500: 17.8 Hz
+2026-03-15 17:20:51,652 [INFO] Session started: Free Flow
+2026-03-15 17:21:19,368 [INFO] Force CSV written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_172119_force.csv
+2026-03-15 17:21:19,368 [INFO] CSVs written: C:\Users\19thk\Capstone\capstone_esp32\tests\gui\recordings\session_20260315_172119_raw.csv
+2026-03-15 17:21:19,370 [INFO] Session stopped: 422 frames, 15.4 Hz, 27.4 s
+2026-03-15 17:21:23,392 [INFO] Frame 1000: 17.8 Hz
+2026-03-15 17:21:32,313 [INFO] Recalibrating (WS command)
+2026-03-15 17:21:32,956 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 17:21:38,142 [INFO] Session started: Free Flow
+2026-03-15 17:21:55,835 [INFO] Frame 1500: 17.8 Hz
+2026-03-15 17:22:28,451 [INFO] Frame 2000: 17.8 Hz
+2026-03-15 17:22:53,922 [INFO] Recalibrating (WS command)
+2026-03-15 17:22:54,522 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 17:23:00,958 [INFO] Frame 2500: 17.8 Hz
+2026-03-15 17:23:13,034 [INFO] Recalibrating (WS command)
+2026-03-15 17:23:13,633 [INFO] Baseline captured (10 scans averaged)
+2026-03-15 17:23:33,458 [INFO] Frame 3000: 17.8 Hz
+2026-03-15 17:24:05,962 [INFO] Frame 3500: 17.8 Hz
+2026-03-15 17:24:38,576 [INFO] Frame 4000: 17.8 Hz
+2026-03-15 17:25:11,085 [INFO] Frame 4500: 17.8 Hz
+2026-03-15 17:25:12,215 [INFO] Reader thread exiting
+2026-03-15 17:25:12,218 [INFO] Disconnected
