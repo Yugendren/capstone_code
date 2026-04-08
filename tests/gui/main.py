@@ -98,7 +98,7 @@ class ApiHandler:
         with backend.lock:
             backend.noise_floor = int(value)
 
-    # Force calibration
+    # Force calibration (legacy)
     def start_force_capture(self):
         backend.start_force_capture()
 
@@ -116,6 +116,26 @@ class ApiHandler:
 
     def load_force_calibration_data(self):
         return backend.get_force_calibration_data()
+
+    # Polynomial force calibration (per-vertebra cubic)
+    def compute_force_polynomial(self, vertebra, cal_points):
+        return backend.compute_force_polynomial(vertebra, cal_points)
+
+    def get_force_polynomials(self):
+        return backend.get_force_polynomials()
+
+    def get_force_calibration_full(self):
+        return backend.get_force_calibration_full()
+
+    def clear_force_calibration_vertebra(self, vertebra):
+        backend.clear_force_calibration_vertebra(vertebra)
+
+    # Session replay
+    def list_recordings(self):
+        return backend.list_recordings()
+
+    def load_recording(self, csv_path):
+        return backend.load_recording(csv_path)
 
     # Firmware flash
     def get_firmware_info(self):

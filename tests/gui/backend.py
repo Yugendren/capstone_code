@@ -59,10 +59,13 @@ class PressureBackend:
         self._spine_cal_frames = []
         self._spine_calibrating = False
 
-        # Force calibration
+        # Force calibration (legacy linear gain map kept for backward compat)
         self.force_gain_map = None          # 40×30 list of floats, or None
         self._force_cal_frames = []
         self._force_calibrating = False
+
+        # Polynomial force calibration (per-vertebra cubic)
+        self.force_poly_coeffs = {}         # {'L3': [a0,a1,a2,a3], ...}
 
         # Exercise region
         self.exercise_region = None  # (rmin, rmax, cmin, cmax) or None
@@ -112,7 +115,7 @@ class PressureBackend:
 
         # Load saved calibrations
         self.load_spine_calibration()
-        self.load_force_calibration()
+        self.load_poly_force_calibration()
         self.load_vertebra_settings()
 
     # ── Serial ──────────────────────────────────────────────────────
@@ -689,6 +692,236 @@ class PressureBackend:
             except Exception:
                 pass
         return None
+
+    # ── Polynomial Force Calibration (per-vertebra cubic) ────────
+
+    @staticmethod
+    def _polyfit3(xs, ys):
+        """Fit a cubic polynomial y = a0 + a1*x + a2*x^2 + a3*x^3.
+
+        Uses Vandermonde matrix + Gaussian elimination (no numpy needed).
+        Returns [a0, a1, a2, a3].
+        """
+        n = len(xs)
+        # Build normal equations: (V^T V) a = V^T y
+        # V is n×4 Vandermonde: [1, x, x^2, x^3]
+        order = 4  # coefficients for degree 3
+        # Compute V^T V (4×4) and V^T y (4×1)
+        vtv = [[0.0] * order for _ in range(order)]
+        vty = [0.0] * order
+        for i in range(n):
+            xi = xs[i]
+            yi = ys[i]
+            xpow = [1.0, xi, xi * xi, xi * xi * xi]
+            for j in range(order):
+                vty[j] += xpow[j] * yi
+                for k in range(order):
+                    vtv[j][k] += xpow[j] * xpow[k]
+
+        # Gaussian elimination with partial pivoting
+        aug = [vtv[r][:] + [vty[r]] for r in range(order)]
+        for col in range(order):
+            # Pivot
+            max_row = col
+            for row in range(col + 1, order):
+                if abs(aug[row][col]) > abs(aug[max_row][col]):
+                    max_row = row
+            aug[col], aug[max_row] = aug[max_row], aug[col]
+            if abs(aug[col][col]) < 1e-12:
+                continue
+            # Eliminate
+            for row in range(col + 1, order):
+                factor = aug[row][col] / aug[col][col]
+                for j in range(col, order + 1):
+                    aug[row][j] -= factor * aug[col][j]
+
+        # Back substitution
+        coeffs = [0.0] * order
+        for i in range(order - 1, -1, -1):
+            if abs(aug[i][i]) < 1e-12:
+                coeffs[i] = 0.0
+                continue
+            s = aug[i][order]
+            for j in range(i + 1, order):
+                s -= aug[i][j] * coeffs[j]
+            coeffs[i] = s / aug[i][i]
+
+        return coeffs
+
+    def compute_force_polynomial(self, vertebra, cal_points):
+        """Compute cubic polynomial for one vertebra from multi-weight data.
+
+        cal_points: list of {weight_grams, peak_adc}
+        Returns [a0, a1, a2, a3] or None on failure.
+        """
+        if len(cal_points) < 2:
+            log.warning("Need at least 2 calibration points, got %d", len(cal_points))
+            return None
+
+        xs = []  # ADC values
+        ys = []  # Force in Newtons
+        for pt in cal_points:
+            adc = pt.get("peak_adc", 0)
+            grams = pt.get("weight_grams", 0)
+            if adc > 0 and grams > 0:
+                xs.append(float(adc))
+                ys.append((grams / 1000.0) * 9.81)
+
+        if len(xs) < 2:
+            log.warning("Not enough valid calibration points")
+            return None
+
+        # For fewer than 4 points, reduce polynomial order
+        if len(xs) == 2:
+            # Linear: force = a0 + a1*adc
+            x1, x2 = xs
+            y1, y2 = ys
+            a1 = (y2 - y1) / (x2 - x1) if x2 != x1 else 0
+            a0 = y1 - a1 * x1
+            coeffs = [a0, a1, 0.0, 0.0]
+        elif len(xs) == 3:
+            # Quadratic: use polyfit3 but result will have a3≈0
+            coeffs = self._polyfit3(xs, ys)
+        else:
+            # Full cubic fit
+            coeffs = self._polyfit3(xs, ys)
+
+        # Store
+        with self.lock:
+            self.force_poly_coeffs[vertebra] = coeffs
+
+        # Save all calibrations to JSON
+        self._save_poly_force_calibration(vertebra, cal_points, coeffs)
+
+        log.info("Force polynomial for %s: [%.6e, %.6e, %.6e, %.6e] from %d points",
+                 vertebra, coeffs[0], coeffs[1], coeffs[2], coeffs[3], len(xs))
+        return coeffs
+
+    def _save_poly_force_calibration(self, vertebra, cal_points, coeffs):
+        """Save/update per-vertebra polynomial calibration to JSON."""
+        # Load existing or start fresh
+        data = {"type": "polynomial", "order": 3, "calibrations": {}}
+        if os.path.exists(self._force_cal_path):
+            try:
+                with open(self._force_cal_path) as f:
+                    existing = json.load(f)
+                if existing.get("type") == "polynomial":
+                    data = existing
+            except Exception:
+                pass
+
+        # Get vertebra position from spine markers
+        pos = self.spine_markers.get(vertebra, [0, 0])
+        data["timestamp"] = datetime.now().isoformat(timespec="seconds")
+        data["calibrations"][vertebra] = {
+            "points": [
+                {"weight_grams": p["weight_grams"], "force_n": round((p["weight_grams"] / 1000.0) * 9.81, 4),
+                 "peak_adc": p["peak_adc"]}
+                for p in cal_points if p.get("peak_adc", 0) > 0
+            ],
+            "coefficients": coeffs,
+            "row": pos[0] if pos else 0,
+            "col": pos[1] if pos else 0,
+        }
+        with open(self._force_cal_path, "w") as f:
+            json.dump(data, f, indent=2)
+        log.info("Polynomial force calibration saved for %s", vertebra)
+
+    def load_poly_force_calibration(self):
+        """Load per-vertebra polynomial coefficients from JSON."""
+        if os.path.exists(self._force_cal_path):
+            try:
+                with open(self._force_cal_path) as f:
+                    data = json.load(f)
+                if data.get("type") == "polynomial":
+                    for vert, info in data.get("calibrations", {}).items():
+                        self.force_poly_coeffs[vert] = info.get("coefficients", [0, 0, 0, 0])
+                    log.info("Polynomial force calibration loaded: %s",
+                             list(self.force_poly_coeffs.keys()))
+                else:
+                    # Legacy linear format — load as gain_map
+                    self.force_gain_map = data.get("gain_map")
+                    log.info("Legacy force calibration loaded")
+            except Exception as e:
+                log.warning("Failed to load force calibration: %s", e)
+
+    def get_force_polynomials(self):
+        """Return all per-vertebra polynomial coefficients."""
+        return dict(self.force_poly_coeffs)
+
+    def get_force_calibration_full(self):
+        """Return full polynomial calibration data (points + coefficients)."""
+        if os.path.exists(self._force_cal_path):
+            try:
+                with open(self._force_cal_path) as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return None
+
+    def clear_force_calibration_vertebra(self, vertebra):
+        """Remove calibration for one vertebra."""
+        with self.lock:
+            self.force_poly_coeffs.pop(vertebra, None)
+        # Update JSON
+        if os.path.exists(self._force_cal_path):
+            try:
+                with open(self._force_cal_path) as f:
+                    data = json.load(f)
+                if data.get("type") == "polynomial":
+                    data["calibrations"].pop(vertebra, None)
+                    with open(self._force_cal_path, "w") as f2:
+                        json.dump(data, f2, indent=2)
+            except Exception:
+                pass
+        log.info("Force calibration cleared for %s", vertebra)
+
+    # ── Session Replay ─────────────────────────────────────────────
+
+    def list_recordings(self):
+        """List saved session recordings grouped by session."""
+        recordings = []
+        if not os.path.isdir(self._recordings_dir):
+            return recordings
+        # Group by session timestamp (session_YYYYMMDD_HHMMSS_*.csv)
+        sessions = {}
+        for fname in sorted(os.listdir(self._recordings_dir)):
+            if not fname.endswith(".csv"):
+                continue
+            parts = fname.replace(".csv", "").split("_")
+            if len(parts) >= 4 and parts[0] == "session":
+                session_key = f"{parts[1]}_{parts[2]}"
+                kind = parts[3] if len(parts) > 3 else "unknown"
+                if session_key not in sessions:
+                    sessions[session_key] = {"name": session_key, "files": {}}
+                sessions[session_key]["files"][kind] = os.path.join(self._recordings_dir, fname)
+        for key in sorted(sessions.keys(), reverse=True):
+            recordings.append(sessions[key])
+        return recordings
+
+    def load_recording(self, csv_path):
+        """Parse a session CSV and return frames for replay."""
+        if not os.path.isfile(csv_path):
+            return None
+        frames = []
+        with open(csv_path, "r") as f:
+            reader = csv.reader(f)
+            header = next(reader, None)
+            if not header:
+                return None
+            for row in reader:
+                if len(row) < 2:
+                    continue
+                ts = int(row[0])
+                values = [float(v) for v in row[1:]]
+                frames.append({"ts": ts, "values": values})
+        return {
+            "frames": frames,
+            "rows": self.ROWS,
+            "cols": self.COLS,
+            "total_frames": len(frames),
+            "duration_ms": frames[-1]["ts"] if frames else 0,
+        }
 
     # ── Firmware Flash ────────────────────────────────────────────
 

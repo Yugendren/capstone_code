@@ -465,6 +465,7 @@
       <span class="status-dot on" id="main-status-dot"></span>
       <span class="port-label" id="main-port-label">COM3</span>
       <span class="hz-label" id="main-hz">-- Hz</span>
+      <span id="heatmap-debug-peak" style="font-size:11px;color:#ffc107;font-family:monospace">Peak: --</span>
     </div>
     <div class="topbar-divider"></div>
     <div class="topbar-section">
@@ -479,6 +480,7 @@
       <button class="btn btn-success btn-sm" id="session-btn" onclick="toggleSession()">Start Session</button>
       <span class="timer" id="session-timer">00:00</span>
       <span class="session-badge badge-idle" id="session-badge">Idle</span>
+      <button class="btn btn-sm" onclick="openReplayPicker()">Replay</button>
     </div>
     <div class="topbar-divider"></div>
     <div class="topbar-section">
@@ -529,6 +531,7 @@
       <div id="graph-panel">
         <div class="graph-controls" id="graph-controls">
           <span id="tracking-label">Tracking: -- (auto)</span>
+          <span id="graph-debug-val" style="font-size:12px;color:#4a90d9;font-family:monospace;min-width:120px">Val: --</span>
           <div class="mode-toggle">
             <button class="btn btn-sm active" id="btn-amplitude" onclick="setGraphMode('amplitude')">Amplitude</button>
             <button class="btn btn-sm" id="btn-displacement" onclick="setGraphMode('displacement')">Displacement</button>
@@ -584,27 +587,54 @@
 </div>
 
 <div id="force-cal-modal">
-  <div class="force-panel">
-    <h3 id="force-cal-title">Force Calibration</h3>
+  <div class="force-panel" style="min-width:500px;max-width:600px">
+    <h3 id="force-cal-title">Force Calibration (Per-Vertebra)</h3>
     <div class="force-instruction" id="force-instruction">
-      Calibrate force readings using a known weight.<br>
-      Place the weight at 5 positions (center + 4 corners).
+      Select a vertebra, then add multiple known weights to build a calibration curve.
     </div>
-    <div class="force-weight-input" id="force-weight-section">
-      <span>Weight:</span>
-      <input type="number" id="force-weight-input" value="300" min="1" max="10000" step="1">
-      <span>grams</span>
-      <span id="force-weight-newtons" style="color:var(--accent)">(= 2.943 N)</span>
+
+    <!-- Step 1: Vertebra selector + status -->
+    <div id="force-vertebra-section">
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:12px">
+        <span>Vertebra:</span>
+        <select id="force-vertebra-select" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:14px">
+          <option value="">-- Select --</option>
+        </select>
+      </div>
+      <div id="force-vertebra-status" style="display:flex;gap:10px;justify-content:center;margin-bottom:12px;font-size:12px"></div>
     </div>
-    <div class="force-progress" id="force-progress"></div>
-    <div class="force-result" id="force-result"></div>
-    <div class="force-summary" id="force-summary" style="display:none"></div>
+
+    <!-- Step 2: Weight capture -->
+    <div id="force-capture-section" style="display:none">
+      <div style="font-size:13px;color:var(--accent);margin-bottom:8px" id="force-capturing-label">Calibrating: L3</div>
+      <div class="force-weight-input" id="force-weight-section">
+        <span>Weight:</span>
+        <input type="number" id="force-weight-input" value="300" min="1" max="10000" step="1">
+        <span>grams</span>
+        <span id="force-weight-newtons" style="color:var(--accent)">(= 2.943 N)</span>
+      </div>
+      <div id="force-points-table" style="font-size:12px;margin-bottom:10px"></div>
+      <div class="force-result" id="force-result"></div>
+    </div>
+
+    <!-- Step 3: Summary + curve preview -->
+    <div id="force-summary-section" style="display:none">
+      <div class="force-summary" id="force-summary"></div>
+      <div style="text-align:center;margin:8px 0">
+        <canvas id="force-curve-canvas" width="300" height="150" style="background:#141428;border-radius:4px;border:1px solid var(--border)"></canvas>
+      </div>
+      <div id="force-equation" style="font-size:12px;color:var(--accent);text-align:center;margin-bottom:8px"></div>
+    </div>
+
     <div class="force-actions">
-      <button class="btn btn-primary" id="force-start-btn" onclick="startForceCalibration()">Start</button>
-      <button class="btn btn-primary" id="force-capture-btn" onclick="captureForcePoint()" style="display:none">Capture</button>
-      <button class="btn btn-success" id="force-accept-btn" onclick="acceptForceCalibration()" style="display:none">Accept</button>
+      <button class="btn btn-primary" id="force-start-btn" onclick="startForceCalibrationNew()">Start</button>
+      <button class="btn btn-primary" id="force-capture-btn" onclick="captureForcePointNew()" style="display:none">Capture Weight</button>
+      <button class="btn btn-sm" id="force-add-btn" onclick="addAnotherWeight()" style="display:none">Add Another Weight</button>
+      <button class="btn btn-primary" id="force-done-btn" onclick="doneCapturing()" style="display:none">Done</button>
+      <button class="btn btn-success" id="force-accept-btn" onclick="acceptForceCalibrationNew()" style="display:none">Save</button>
+      <button class="btn btn-sm" id="force-next-btn" onclick="calibrateNextVertebra()" style="display:none">Calibrate Next</button>
       <button class="btn" id="force-redo-btn" onclick="redoForceCalibration()" style="display:none">Redo</button>
-      <button class="btn" id="force-cancel-btn" onclick="cancelForceCalibration()">Cancel</button>
+      <button class="btn" id="force-cancel-btn" onclick="cancelForceCalibration()">Close</button>
     </div>
   </div>
 </div>
@@ -615,7 +645,41 @@
     <div class="results-stats" id="results-stats"></div>
     <div class="results-actions">
       <button class="btn btn-primary" onclick="openRecordings()">Open Recordings Folder</button>
+      <button class="btn btn-sm" id="results-replay-btn" onclick="replayLastSession()" style="display:none">Replay</button>
       <button class="btn btn-success" onclick="closeResults()">New Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Replay transport bar (shown at bottom during replay) -->
+<div id="replay-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;
+    background:var(--bg-surface);border-top:2px solid var(--accent);
+    padding:8px 20px;z-index:70;display:none;
+    justify-content:center;align-items:center;gap:14px;flex-wrap:wrap">
+  <button class="btn btn-sm" onclick="replayStepBack()">&lt;&lt;</button>
+  <button class="btn btn-sm btn-primary" id="replay-play-btn" onclick="toggleReplayPlay()">Play</button>
+  <button class="btn btn-sm" onclick="replayStepForward()">&gt;&gt;</button>
+  <input type="range" id="replay-scrub" min="0" max="100" value="0"
+    style="flex:1;max-width:400px;accent-color:var(--accent)"
+    oninput="scrubReplay(this.value)">
+  <select id="replay-speed" onchange="setReplaySpeed(this.value)" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px;font-size:12px">
+    <option value="0.5">0.5x</option>
+    <option value="1" selected>1x</option>
+    <option value="2">2x</option>
+    <option value="4">4x</option>
+  </select>
+  <span id="replay-frame-info" style="font-size:11px;color:var(--text-dim);min-width:180px">Frame 0/0</span>
+  <button class="btn btn-sm btn-danger" onclick="stopReplay()">Exit Replay</button>
+</div>
+
+<!-- Replay session picker -->
+<div id="replay-picker-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:60">
+  <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:24px 32px;min-width:400px;max-width:500px;max-height:70vh;overflow-y:auto">
+    <h3 style="margin-bottom:12px">Replay Session</h3>
+    <div id="replay-session-list" style="font-size:13px;margin-bottom:12px">Loading...</div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn" onclick="document.getElementById('replay-picker-modal').style.display='none'">Cancel</button>
     </div>
   </div>
 </div>
@@ -765,6 +829,7 @@ let ws = null;
 let mode = 'filtered';
 let latestData = null;
 let sessionActive = false;
+let graphPreBuffering = false;
 let sessionStart = 0;
 let timerInterval = null;
 let showSpineOverlay = true;
@@ -808,16 +873,19 @@ document.addEventListener('click', ensureAudioCtx, { once: true });
 let graphMode = 'amplitude';
 const GRAPH_MAX_SAMPLES = 600;
 let graphBuffer = new Float64Array(GRAPH_MAX_SAMPLES);
+let graphLabelBuffer = new Array(GRAPH_MAX_SAMPLES).fill('');
 let graphHead = 0;
 let graphCount = 0;
 let graphTracking = 'auto';
 let graphCurrentLabel = '--';
+let graphForceMode = false;
 const graphCanvas = document.getElementById('graph-canvas');
 const graphCtx = graphCanvas.getContext('2d');
 
 // Force calibration
-let forceGainMap = null;        // 40×30 gains from backend
+let forceGainMap = null;        // 40×30 gains from backend (legacy)
 let forceCalEnabled = false;    // checkbox state
+let forcePolyCoeffs = {};       // {'L1': [a0,a1,a2,a3], ...} per-vertebra polynomials
 
 // Spine
 const SPINE_LABELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
@@ -905,8 +973,11 @@ function applyLoadedSettings(s) {
     forceCalEnabled = s.force_cal_enabled;
     document.getElementById('force-cal-toggle').checked = forceCalEnabled;
   }
-  // Load force gain map from backend
+  // Load force calibration from backend (polynomial or legacy)
   try {
+    pywebview.api.get_force_polynomials().then(coeffs => {
+      if (coeffs && Object.keys(coeffs).length > 0) forcePolyCoeffs = coeffs;
+    });
     pywebview.api.get_force_gain_map().then(map => {
       if (map) forceGainMap = map;
     });
@@ -1062,12 +1133,37 @@ function resizeCanvas() {
 // ADC to approximate force (Newtons)
 // If calibrated gain map is available and enabled, use per-cell gain
 // Otherwise fallback to crude linear: F(N) = ADC * 0.01
-function adcToForce(adc, row, col) {
+function adcToForceNum(adc, row, col) {
+  // Returns force as a number (for summation), not a string
   if (adc <= 0) return 0;
-  if (forceGainMap && forceCalEnabled && row !== undefined && col !== undefined) {
-    return (adc * forceGainMap[row][col]).toFixed(2);
+  if (forceCalEnabled && Object.keys(forcePolyCoeffs).length > 0 && row !== undefined && col !== undefined) {
+    const vert = getNearestCalibratedVertebra(row, col);
+    if (vert && forcePolyCoeffs[vert]) {
+      const [a0, a1, a2, a3] = forcePolyCoeffs[vert];
+      return Math.max(0, a0 + a1 * adc + a2 * adc * adc + a3 * adc * adc * adc);
+    }
   }
-  return (adc * 0.01).toFixed(1);
+  if (forceGainMap && forceCalEnabled && row !== undefined && col !== undefined) {
+    return Math.max(0, adc * forceGainMap[row][col]);
+  }
+  return adc * 0.01;
+}
+
+function adcToForce(adc, row, col) {
+  return adcToForceNum(adc, row, col).toFixed(2);
+}
+
+function getNearestCalibratedVertebra(row, col) {
+  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
+  let best = null, bestDist = Infinity;
+  for (const [label, pos] of Object.entries(markers)) {
+    if (!forcePolyCoeffs[label]) continue;
+    const dr = (row - pos[0]) * 4.0;  // mm
+    const dc = (col - pos[1]) * 5.0;  // mm
+    const d = dr * dr + dc * dc;
+    if (d < bestDist) { bestDist = d; best = label; }
+  }
+  return best;
 }
 
 function drawGrid(data) {
@@ -1434,8 +1530,19 @@ function updateDisplay(data) {
 
   drawGrid(data);
   document.getElementById('main-hz').textContent = data.hz.toFixed(1) + ' Hz';
+
+  // Debug: show heatmap peak for comparing with graph value
+  const dgrid = mode === 'raw' ? data.raw : data.grid;
+  let heatPeak = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) {
+      const v = dgrid[r] ? (dgrid[r][c] || 0) : 0;
+      if (v > heatPeak) heatPeak = v;
+    }
+  document.getElementById('heatmap-debug-peak').textContent = `Peak: ${heatPeak}`;
+
   updateNearestVertebra(data);
-  if (sessionActive) updateGraph(data);
+  if (sessionActive || graphPreBuffering) updateGraph(data);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1521,14 +1628,27 @@ function setNoiseFloor(val) {
 
 async function toggleSession() {
   if (!sessionActive) {
-    // Countdown first
+    // Require spine calibration before starting a session
+    const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
+    if (Object.keys(markers).length === 0) {
+      showError('Please calibrate spine (L1-L5) before starting a session.');
+      return;
+    }
+
+    // Start pre-buffering graph data before countdown
+    resetGraph();
+    graphPreBuffering = true;
+
+    // Countdown (graph collects data during this)
     if (countdownDelay > 0) {
       const proceed = await runCountdown(countdownDelay);
-      if (!proceed) return;  // cancelled
+      if (!proceed) { graphPreBuffering = false; return; }
     }
-    // Actually start
+
+    // Start backend recording (CSV timing preserved — starts at GO!)
     const exercise = document.getElementById('exercise-select').value;
     await pywebview.api.start_session(exercise);
+    graphPreBuffering = false;
     sessionActive = true;
     sessionStart = Date.now();
     document.getElementById('session-btn').textContent = 'Stop Session';
@@ -1538,9 +1658,11 @@ async function toggleSession() {
     document.getElementById('exercise-select').disabled = true;
     document.getElementById('graph-panel').classList.add('visible');
     document.getElementById('content-main').classList.add('side-by-side');
-    // Resize heatmap first (now smaller due to graph), then graph
-    setTimeout(() => { resizeCanvas(); resizeGraph(); }, 50);
-    resetGraph();
+    // Force layout reflow, then resize synchronously
+    document.getElementById('content-main').offsetHeight;
+    resizeCanvas();
+    resizeGraph();
+    drawGraph();
     timerInterval = setInterval(updateTimer, 200);
   } else {
     // Stop
@@ -1609,6 +1731,11 @@ function showResults(result) {
     <div><span class="label">Filtered CSV</span><span><span class="results-check">&#10003;</span>${result.filtered_csv ? 'Saved' : 'None'}</span></div>
     ${forceRow}
   `;
+  // Enable replay button for last session
+  lastSessionCsvPath = result.filtered_csv || result.raw_csv || '';
+  const replayBtn = document.getElementById('results-replay-btn');
+  replayBtn.style.display = lastSessionCsvPath ? '' : 'none';
+
   document.getElementById('results-overlay').style.display = 'flex';
 }
 
@@ -1903,6 +2030,7 @@ function resizeGraph() {
 
 function resetGraph() {
   graphBuffer = new Float64Array(GRAPH_MAX_SAMPLES);
+  graphLabelBuffer = new Array(GRAPH_MAX_SAMPLES).fill('');
   graphHead = 0; graphCount = 0;
 }
 
@@ -1910,59 +2038,97 @@ function updateGraph(data) {
   let trackVal = 0;
   const markers = data.spine_markers || {};
   const exercise = document.getElementById('exercise-select').value;
+  const grid = mode === 'raw' ? data.raw : data.grid;
+  const useForceSum = forceCalEnabled && Object.keys(forcePolyCoeffs).length > 0;
 
-  // Determine what to track based on exercise mode
-  if (exercise === 'Free Flow') {
-    // Track global peak (highest value anywhere on mat)
-    for (let r = 0; r < ROWS; r++)
-      for (let c = 0; c < COLS; c++) {
-        const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
-        if (v > trackVal) trackVal = v;
-      }
-    graphCurrentLabel = 'Peak';
-  } else {
-    // L* Mobilization — track that specific vertebra's region
-    const target = exercise.split(' ')[0];  // "L4"
-    if (markers[target]) {
-      const [tr, tc] = markers[target];
-      // Peak within +-3 cells of target vertebra
-      const margin = 3;
-      for (let r = Math.max(0, tr - margin); r <= Math.min(ROWS - 1, tr + margin); r++) {
-        for (let c = Math.max(0, tc - margin); c <= Math.min(COLS - 1, tc + margin); c++) {
-          const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
-          if (v > trackVal) trackVal = v;
+  if (useForceSum) {
+    // Force summation mode: sum force across all lumbar vertebra regions
+    const margin = 3;
+    const visited = new Set();
+    for (const [label, pos] of Object.entries(markers)) {
+      if (!forcePolyCoeffs[label]) continue;
+      const [mr, mc] = pos;
+      for (let r = Math.max(0, mr - margin); r <= Math.min(ROWS - 1, mr + margin); r++) {
+        for (let c = Math.max(0, mc - margin); c <= Math.min(COLS - 1, mc + margin); c++) {
+          const key = r * COLS + c;
+          if (visited.has(key)) continue;
+          visited.add(key);
+          const v = grid[r] ? (grid[r][c] || 0) : 0;
+          if (v > 0) trackVal += adcToForceNum(v, r, c);
         }
       }
-      graphCurrentLabel = target;
-    } else {
-      // Fallback: no calibration, track global peak
+    }
+    graphCurrentLabel = 'Total Force';
+    graphForceMode = true;
+  } else {
+    graphForceMode = false;
+    // Determine what to track based on exercise mode
+    if (exercise === 'Free Flow') {
       for (let r = 0; r < ROWS; r++)
         for (let c = 0; c < COLS; c++) {
-          const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
+          const v = grid[r] ? (grid[r][c] || 0) : 0;
           if (v > trackVal) trackVal = v;
         }
       graphCurrentLabel = 'Peak';
+    } else {
+      const target = exercise.split(' ')[0];
+      if (markers[target]) {
+        const [tr, tc] = markers[target];
+        const margin = 3;
+        for (let r = Math.max(0, tr - margin); r <= Math.min(ROWS - 1, tr + margin); r++) {
+          for (let c = Math.max(0, tc - margin); c <= Math.min(COLS - 1, tc + margin); c++) {
+            const v = grid[r] ? (grid[r][c] || 0) : 0;
+            if (v > trackVal) trackVal = v;
+          }
+        }
+        graphCurrentLabel = target;
+      } else {
+        for (let r = 0; r < ROWS; r++)
+          for (let c = 0; c < COLS; c++) {
+            const v = grid[r] ? (grid[r][c] || 0) : 0;
+            if (v > trackVal) trackVal = v;
+          }
+        graphCurrentLabel = 'Peak';
+      }
+    }
+
+    // Override with pinned tracking
+    if (graphTracking !== 'auto' && markers[graphTracking]) {
+      const [r, c] = markers[graphTracking];
+      trackVal = grid[r] ? (grid[r][c] || 0) : 0;
+      graphCurrentLabel = graphTracking;
     }
   }
 
-  // Override with pinned tracking
-  if (graphTracking !== 'auto' && markers[graphTracking]) {
-    const [r, c] = markers[graphTracking];
-    trackVal = data.grid[r] ? (data.grid[r][c] || 0) : 0;
-    graphCurrentLabel = graphTracking;
+  // Detect which vertebra has peak pressure (for location tracking)
+  let peakVertebra = '';
+  let peakVertebraVal = 0;
+  for (const [label, pos] of Object.entries(markers)) {
+    const [mr, mc] = pos;
+    const v = grid[mr] ? (grid[mr][mc] || 0) : 0;
+    if (v > peakVertebraVal) { peakVertebraVal = v; peakVertebra = label; }
   }
 
   graphBuffer[graphHead] = trackVal;
+  graphLabelBuffer[graphHead] = peakVertebra;
   graphHead = (graphHead + 1) % GRAPH_MAX_SAMPLES;
   if (graphCount < GRAPH_MAX_SAMPLES) graphCount++;
+
+  // Debug: show current tracked value (compare with heatmap to isolate lag)
+  document.getElementById('graph-debug-val').textContent =
+    `Val: ${trackVal.toFixed(1)} | ${peakVertebra || '-'} | #${graphCount}`;
+
   updateTrackingLabel();
   drawGraph();
 }
 
+const VERTEBRA_COLORS = { L1: '#e74c3c', L2: '#e67e22', L3: '#f1c40f', L4: '#2ecc71', L5: '#3498db' };
+
 function drawGraph() {
   const w = graphCanvas.width;
   const h = graphCanvas.height;
-  const pad = { top: 8, right: 10, bottom: 20, left: 46 };
+  const locBandH = 22;  // height for vertebra location band
+  const pad = { top: 8, right: 10, bottom: 20 + locBandH, left: 46 };
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
 
@@ -1970,42 +2136,50 @@ function drawGraph() {
   graphCtx.fillStyle = '#141428';
   graphCtx.fillRect(0, 0, w, h);
 
-  // Background threshold zones (colored bands)
+  // Determine Y-axis range
+  let yMax = 4095;
+  let yUnit = '';
+  if (graphForceMode) {
+    // Auto-scale: find max value in visible buffer
+    yMax = 1;
+    for (let i = 0; i < Math.min(graphCount, GRAPH_MAX_SAMPLES); i++) {
+      if (graphBuffer[i] > yMax) yMax = graphBuffer[i];
+    }
+    yMax = Math.ceil(yMax * 1.2) || 10;
+    yUnit = ' N';
+  }
+
   const yForVal = (v) => {
-    const norm = v / 4095;
+    const norm = v / yMax;
     return graphMode === 'displacement'
       ? pad.top + norm * plotH
       : pad.top + plotH - norm * plotH;
   };
 
-  // Green zone: 0 to threshLow
-  const greenY1 = yForVal(0);
-  const greenY2 = yForVal(threshLow);
-  const greenTop = Math.min(greenY1, greenY2);
-  const greenH = Math.abs(greenY2 - greenY1);
-  graphCtx.fillStyle = 'rgba(40, 167, 69, 0.12)';
-  graphCtx.fillRect(pad.left, greenTop, plotW, greenH);
+  if (!graphForceMode) {
+    // Background threshold zones (ADC mode only)
+    const greenY1 = yForVal(0);
+    const greenY2 = yForVal(threshLow);
+    graphCtx.fillStyle = 'rgba(40, 167, 69, 0.12)';
+    graphCtx.fillRect(pad.left, Math.min(greenY1, greenY2), plotW, Math.abs(greenY2 - greenY1));
 
-  // Yellow zone: threshLow to threshHigh
-  const yellowY1 = yForVal(threshLow);
-  const yellowY2 = yForVal(threshHigh);
-  const yellowTop = Math.min(yellowY1, yellowY2);
-  const yellowH = Math.abs(yellowY2 - yellowY1);
-  graphCtx.fillStyle = 'rgba(255, 193, 7, 0.12)';
-  graphCtx.fillRect(pad.left, yellowTop, plotW, yellowH);
+    const yellowY1 = yForVal(threshLow);
+    const yellowY2 = yForVal(threshHigh);
+    graphCtx.fillStyle = 'rgba(255, 193, 7, 0.12)';
+    graphCtx.fillRect(pad.left, Math.min(yellowY1, yellowY2), plotW, Math.abs(yellowY2 - yellowY1));
 
-  // Red zone: threshHigh to 4095
-  const redY1 = yForVal(threshHigh);
-  const redY2 = yForVal(4095);
-  const redTop = Math.min(redY1, redY2);
-  const redH = Math.abs(redY2 - redY1);
-  graphCtx.fillStyle = 'rgba(220, 53, 69, 0.15)';
-  graphCtx.fillRect(pad.left, redTop, plotW, redH);
+    const redY1 = yForVal(threshHigh);
+    const redY2 = yForVal(4095);
+    graphCtx.fillStyle = 'rgba(220, 53, 69, 0.15)';
+    graphCtx.fillRect(pad.left, Math.min(redY1, redY2), plotW, Math.abs(redY2 - redY1));
+  }
 
   // Grid lines
   graphCtx.strokeStyle = '#222';
   graphCtx.lineWidth = 1;
-  for (let v = 0; v <= 4095; v += 1000) {
+  const gridStep = graphForceMode ? Math.max(1, Math.ceil(yMax / 5)) : 1000;
+  const gridMax = graphForceMode ? yMax : 4095;
+  for (let v = 0; v <= gridMax; v += gridStep) {
     const gy = yForVal(v);
     graphCtx.beginPath();
     graphCtx.moveTo(pad.left, gy);
@@ -2015,49 +2189,91 @@ function drawGraph() {
     graphCtx.font = '10px monospace';
     graphCtx.textAlign = 'right';
     graphCtx.textBaseline = 'middle';
-    graphCtx.fillText(v, pad.left - 4, gy);
+    graphCtx.fillText(graphForceMode ? v.toFixed(1) + yUnit : v, pad.left - 4, gy);
   }
 
-  // Threshold boundary lines (subtle)
-  graphCtx.strokeStyle = 'rgba(255,193,7,0.4)';
-  graphCtx.lineWidth = 1;
-  graphCtx.beginPath();
-  graphCtx.moveTo(pad.left, yForVal(threshLow));
-  graphCtx.lineTo(pad.left + plotW, yForVal(threshLow));
-  graphCtx.stroke();
+  if (!graphForceMode) {
+    // Threshold boundary lines
+    graphCtx.strokeStyle = 'rgba(255,193,7,0.4)';
+    graphCtx.lineWidth = 1;
+    graphCtx.beginPath();
+    graphCtx.moveTo(pad.left, yForVal(threshLow));
+    graphCtx.lineTo(pad.left + plotW, yForVal(threshLow));
+    graphCtx.stroke();
 
-  graphCtx.strokeStyle = 'rgba(220,53,69,0.5)';
-  graphCtx.beginPath();
-  graphCtx.moveTo(pad.left, yForVal(threshHigh));
-  graphCtx.lineTo(pad.left + plotW, yForVal(threshHigh));
-  graphCtx.stroke();
+    graphCtx.strokeStyle = 'rgba(220,53,69,0.5)';
+    graphCtx.beginPath();
+    graphCtx.moveTo(pad.left, yForVal(threshHigh));
+    graphCtx.lineTo(pad.left + plotW, yForVal(threshHigh));
+    graphCtx.stroke();
+  }
 
-  if (graphCount < 2) return;
+  if (graphCount < 1) return;
 
   const maxSamples = Math.min(graphCount, Math.floor(plotW / 2));
   const startIdx = graphCount > maxSamples
     ? (graphHead - maxSamples + GRAPH_MAX_SAMPLES) % GRAPH_MAX_SAMPLES
     : (graphHead - graphCount + GRAPH_MAX_SAMPLES) % GRAPH_MAX_SAMPLES;
 
-  // Draw line
-  graphCtx.beginPath();
-  for (let i = 0; i < maxSamples; i++) {
-    const idx = (startIdx + i) % GRAPH_MAX_SAMPLES;
-    const val = graphBuffer[idx];
-    const x = pad.left + (i / (maxSamples - 1)) * plotW;
+  // Draw data line
+  if (maxSamples === 1) {
+    const val = graphBuffer[startIdx];
+    const x = pad.left + plotW / 2;
     const y = yForVal(val);
-    if (i === 0) graphCtx.moveTo(x, y);
-    else graphCtx.lineTo(x, y);
+    graphCtx.beginPath();
+    graphCtx.arc(x, y, 3, 0, Math.PI * 2);
+    graphCtx.fillStyle = '#4a90d9';
+    graphCtx.fill();
+  } else {
+    graphCtx.beginPath();
+    for (let i = 0; i < maxSamples; i++) {
+      const idx = (startIdx + i) % GRAPH_MAX_SAMPLES;
+      const val = graphBuffer[idx];
+      const x = pad.left + (i / (maxSamples - 1)) * plotW;
+      const y = yForVal(val);
+      if (i === 0) graphCtx.moveTo(x, y); else graphCtx.lineTo(x, y);
+    }
+    graphCtx.strokeStyle = '#4a90d9';
+    graphCtx.lineWidth = 2;
+    graphCtx.stroke();
   }
-  graphCtx.strokeStyle = '#4a90d9';
-  graphCtx.lineWidth = 2;
-  graphCtx.stroke();
+
+  // Vertebra location band (bottom strip)
+  const bandY = h - locBandH - 2;
+  graphCtx.fillStyle = '#0a0a1a';
+  graphCtx.fillRect(pad.left, bandY, plotW, locBandH - 4);
+
+  if (maxSamples > 1) {
+    const segW = plotW / maxSamples;
+    for (let i = 0; i < maxSamples; i++) {
+      const idx = (startIdx + i) % GRAPH_MAX_SAMPLES;
+      const label = graphLabelBuffer[idx];
+      if (label && VERTEBRA_COLORS[label]) {
+        const x = pad.left + (i / (maxSamples - 1)) * plotW;
+        graphCtx.fillStyle = VERTEBRA_COLORS[label] + '99';
+        graphCtx.fillRect(x - segW / 2, bandY, segW + 1, locBandH - 4);
+      }
+    }
+  }
+
+  // Location band legend (small, right-aligned)
+  graphCtx.font = '8px monospace';
+  graphCtx.textBaseline = 'middle';
+  let lx = pad.left + plotW - 5;
+  for (const label of ['L5', 'L4', 'L3', 'L2', 'L1']) {
+    if (!VERTEBRA_COLORS[label]) continue;
+    const tw = graphCtx.measureText(label).width;
+    lx -= tw + 12;
+    graphCtx.fillStyle = VERTEBRA_COLORS[label];
+    graphCtx.fillRect(lx, bandY + 2, 6, 6);
+    graphCtx.fillText(label, lx + 8, bandY + 5);
+  }
 
   // X label
   graphCtx.fillStyle = '#555';
   graphCtx.font = '10px sans-serif';
   graphCtx.textAlign = 'center';
-  graphCtx.fillText('Time (scrolling)', pad.left + plotW / 2, h - 3);
+  graphCtx.fillText(graphForceMode ? 'Time — Total Lumbar Force' : 'Time (scrolling)', pad.left + plotW / 2, h - 3);
 }
 
 function setGraphMode(m) {
@@ -2122,6 +2338,7 @@ async function openSettings() {
 async function clearForceCalUI() {
   await pywebview.api.clear_force_calibration();
   forceGainMap = null;
+  forcePolyCoeffs = {};
   forceCalEnabled = false;
   document.getElementById('force-cal-toggle').checked = false;
   document.getElementById('set-force-status').textContent = 'Not calibrated';
@@ -2470,33 +2687,56 @@ function cancelVertebraConfig() {
 // Force Calibration Wizard
 // ═══════════════════════════════════════════════════════════
 
-const FORCE_CAL_STEPS = [
-  { name: 'center', label: 'CENTER', instruction: 'Place the weight in the CENTER of the mat, then click Capture.' },
-  { name: 'top-left', label: 'TL', instruction: 'Place the weight in the TOP-LEFT corner of the mat, then click Capture.' },
-  { name: 'top-right', label: 'TR', instruction: 'Place the weight in the TOP-RIGHT corner of the mat, then click Capture.' },
-  { name: 'bottom-left', label: 'BL', instruction: 'Place the weight in the BOTTOM-LEFT corner of the mat, then click Capture.' },
-  { name: 'bottom-right', label: 'BR', instruction: 'Place the weight in the BOTTOM-RIGHT corner of the mat, then click Capture.' },
-];
-
-let forceCalStep = 0;
-let forceCalResults = [];  // [{name, row, col, peak_adc, frames}, ...]
+// Per-vertebra multi-weight force calibration state
+let forceCalVertebra = null;     // 'L1'-'L5' currently calibrating
+let forceCalPoints = [];          // [{weight_grams, peak_adc}, ...]
 
 function openForceCalibration() {
-  forceCalStep = 0;
-  forceCalResults = [];
+  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
+  if (Object.keys(markers).length === 0) {
+    showError('Please calibrate spine (L1-L5) first before force calibration.');
+    return;
+  }
+
   document.getElementById('force-cal-modal').style.display = 'flex';
-  document.getElementById('force-weight-section').style.display = 'flex';
+  document.getElementById('force-vertebra-section').style.display = '';
+  document.getElementById('force-capture-section').style.display = 'none';
+  document.getElementById('force-summary-section').style.display = 'none';
   document.getElementById('force-start-btn').style.display = '';
   document.getElementById('force-capture-btn').style.display = 'none';
+  document.getElementById('force-add-btn').style.display = 'none';
+  document.getElementById('force-done-btn').style.display = 'none';
   document.getElementById('force-accept-btn').style.display = 'none';
+  document.getElementById('force-next-btn').style.display = 'none';
   document.getElementById('force-redo-btn').style.display = 'none';
-  document.getElementById('force-progress').innerHTML = '';
-  document.getElementById('force-result').textContent = '';
-  document.getElementById('force-summary').style.display = 'none';
-  document.getElementById('force-cal-title').textContent = 'Force Calibration';
-  document.getElementById('force-instruction').innerHTML =
-    'Calibrate force readings using a known weight.<br>Place the weight at 5 positions (center + 4 corners).';
+  document.getElementById('force-instruction').textContent =
+    'Select a vertebra, then add multiple known weights to build a calibration curve.';
+
+  // Populate vertebra dropdown
+  const sel = document.getElementById('force-vertebra-select');
+  sel.innerHTML = '<option value="">-- Select --</option>';
+  for (const label of ['L1', 'L2', 'L3', 'L4', 'L5']) {
+    if (markers[label]) {
+      sel.innerHTML += `<option value="${label}">${label}</option>`;
+    }
+  }
+
+  // Show per-vertebra calibration status
+  updateForceVertebraStatus();
   updateForceWeightDisplay();
+}
+
+function updateForceVertebraStatus() {
+  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
+  let html = '';
+  for (const label of ['L1', 'L2', 'L3', 'L4', 'L5']) {
+    if (!markers[label]) continue;
+    const hasCal = forcePolyCoeffs[label] ? true : false;
+    const color = hasCal ? 'var(--success)' : 'var(--text-dim)';
+    const icon = hasCal ? '&#10003;' : '&#9675;';
+    html += `<span style="color:${color}">${icon} ${label}</span>`;
+  }
+  document.getElementById('force-vertebra-status').innerHTML = html;
 }
 
 function updateForceWeightDisplay() {
@@ -2504,38 +2744,47 @@ function updateForceWeightDisplay() {
   const newtons = (grams / 1000.0) * 9.81;
   document.getElementById('force-weight-newtons').textContent = `(= ${newtons.toFixed(3)} N)`;
 }
-// Live update
 document.getElementById('force-weight-input').addEventListener('input', updateForceWeightDisplay);
 
-function startForceCalibration() {
-  forceCalStep = 0;
-  forceCalResults = [];
-  document.getElementById('force-weight-section').style.display = 'none';
+function startForceCalibrationNew() {
+  const vert = document.getElementById('force-vertebra-select').value;
+  if (!vert) { document.getElementById('force-result').textContent = 'Select a vertebra first.'; return; }
+
+  forceCalVertebra = vert;
+  forceCalPoints = [];
+
+  document.getElementById('force-vertebra-section').style.display = 'none';
+  document.getElementById('force-capture-section').style.display = '';
+  document.getElementById('force-summary-section').style.display = 'none';
   document.getElementById('force-start-btn').style.display = 'none';
   document.getElementById('force-capture-btn').style.display = '';
-  showForceStep();
-}
-
-function showForceStep() {
-  const step = FORCE_CAL_STEPS[forceCalStep];
-  document.getElementById('force-instruction').textContent = step.instruction;
+  document.getElementById('force-add-btn').style.display = 'none';
+  document.getElementById('force-done-btn').style.display = 'none';
+  document.getElementById('force-accept-btn').style.display = 'none';
+  document.getElementById('force-next-btn').style.display = 'none';
+  document.getElementById('force-redo-btn').style.display = 'none';
+  document.getElementById('force-capturing-label').textContent = `Calibrating: ${vert}`;
+  document.getElementById('force-instruction').textContent =
+    `Place a known weight on ${vert} position, enter the weight, and click Capture.`;
   document.getElementById('force-result').textContent = '';
-  document.getElementById('force-capture-btn').disabled = false;
-  document.getElementById('force-capture-btn').textContent = 'Capture';
-
-  // Build progress dots
-  let html = '';
-  for (let i = 0; i < FORCE_CAL_STEPS.length; i++) {
-    const s = FORCE_CAL_STEPS[i];
-    let cls = 'force-dot';
-    if (i < forceCalStep) cls += ' done';
-    else if (i === forceCalStep) cls += ' active';
-    html += `<div class="force-step"><div class="${cls}">${i < forceCalStep ? '&#10003;' : ''}</div><span>${s.label}</span></div>`;
-  }
-  document.getElementById('force-progress').innerHTML = html;
+  updateForcePointsTable();
 }
 
-async function captureForcePoint() {
+function updateForcePointsTable() {
+  if (forceCalPoints.length === 0) {
+    document.getElementById('force-points-table').innerHTML = '<span style="color:var(--text-dim)">No points captured yet. Need at least 2 (recommend 4+).</span>';
+    return;
+  }
+  let html = '<table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="color:var(--text-dim)"><th>#</th><th>Weight</th><th>Force</th><th>ADC</th></tr>';
+  forceCalPoints.forEach((p, i) => {
+    const fn = ((p.weight_grams / 1000.0) * 9.81).toFixed(3);
+    html += `<tr><td>${i + 1}</td><td>${p.weight_grams}g</td><td>${fn} N</td><td>${p.peak_adc}</td></tr>`;
+  });
+  html += '</table>';
+  document.getElementById('force-points-table').innerHTML = html;
+}
+
+async function captureForcePointNew() {
   const btn = document.getElementById('force-capture-btn');
   btn.disabled = true;
   btn.textContent = 'Capturing...';
@@ -2547,102 +2796,373 @@ async function captureForcePoint() {
   if (!result || result.peak_adc <= 0) {
     document.getElementById('force-result').textContent = 'No pressure detected. Make sure weight is on the mat.';
     btn.disabled = false;
-    btn.textContent = 'Retry';
+    btn.textContent = 'Capture Weight';
     return;
   }
 
-  const step = FORCE_CAL_STEPS[forceCalStep];
-  forceCalResults.push({
-    name: step.name,
-    row: result.row,
-    col: result.col,
-    peak_adc: result.peak_adc,
-    frames: result.frames,
-  });
+  const grams = parseFloat(document.getElementById('force-weight-input').value) || 300;
+  forceCalPoints.push({ weight_grams: grams, peak_adc: result.peak_adc });
 
   document.getElementById('force-result').textContent =
-    `Peak ADC: ${result.peak_adc} at R${result.row} C${result.col} (${result.frames} frames)`;
+    `Captured: ${grams}g -> ADC ${result.peak_adc} (${result.frames} frames)`;
 
-  forceCalStep++;
+  btn.disabled = false;
+  btn.textContent = 'Capture Weight';
 
-  if (forceCalStep >= FORCE_CAL_STEPS.length) {
-    // All done — show summary
-    setTimeout(showForceSummary, 800);
-  } else {
-    // Next step after brief delay
-    setTimeout(showForceStep, 800);
+  updateForcePointsTable();
+
+  // Show add/done buttons after first capture
+  if (forceCalPoints.length >= 1) {
+    document.getElementById('force-add-btn').style.display = '';
+  }
+  if (forceCalPoints.length >= 2) {
+    document.getElementById('force-done-btn').style.display = '';
   }
 }
 
-function showForceSummary() {
-  const grams = parseFloat(document.getElementById('force-weight-input').value) || 300;
-  const newtons = (grams / 1000.0) * 9.81;
+function addAnotherWeight() {
+  document.getElementById('force-weight-input').value = '';
+  document.getElementById('force-weight-input').focus();
+  document.getElementById('force-result').textContent = 'Change the weight on the mat, enter new weight, and click Capture.';
+}
 
-  document.getElementById('force-capture-btn').style.display = 'none';
-  document.getElementById('force-accept-btn').style.display = '';
-  document.getElementById('force-redo-btn').style.display = '';
-  document.getElementById('force-instruction').textContent = 'Calibration complete! Review the results:';
-
-  // Update progress dots all done
-  let html = '';
-  for (let i = 0; i < FORCE_CAL_STEPS.length; i++) {
-    html += `<div class="force-step"><div class="force-dot done">&#10003;</div><span>${FORCE_CAL_STEPS[i].label}</span></div>`;
+async function doneCapturing() {
+  if (forceCalPoints.length < 2) {
+    document.getElementById('force-result').textContent = 'Need at least 2 weight points.';
+    return;
   }
-  document.getElementById('force-progress').innerHTML = html;
+
+  document.getElementById('force-capture-section').style.display = 'none';
+  document.getElementById('force-capture-btn').style.display = 'none';
+  document.getElementById('force-add-btn').style.display = 'none';
+  document.getElementById('force-done-btn').style.display = 'none';
+
+  // Compute polynomial on backend
+  document.getElementById('force-instruction').textContent = 'Computing polynomial fit...';
+  const coeffs = await pywebview.api.compute_force_polynomial(forceCalVertebra, forceCalPoints);
+
+  if (!coeffs) {
+    document.getElementById('force-instruction').textContent = 'Failed to compute polynomial. Try again.';
+    document.getElementById('force-redo-btn').style.display = '';
+    return;
+  }
+
+  forcePolyCoeffs[forceCalVertebra] = coeffs;
+
+  // Show summary
+  document.getElementById('force-summary-section').style.display = '';
+  document.getElementById('force-accept-btn').style.display = '';
+  document.getElementById('force-next-btn').style.display = '';
+  document.getElementById('force-redo-btn').style.display = '';
+  document.getElementById('force-instruction').textContent = `Polynomial fit for ${forceCalVertebra}:`;
+
+  // Equation display
+  const [a0, a1, a2, a3] = coeffs;
+  document.getElementById('force-equation').textContent =
+    `F = ${a3.toExponential(3)}x\u00B3 + ${a2.toExponential(3)}x\u00B2 + ${a1.toExponential(3)}x + ${a0.toFixed(4)}`;
 
   // Summary table
-  let summaryHtml = `<div><span class="label">Weight</span><span>${grams}g (${newtons.toFixed(3)} N)</span></div>`;
-  for (const r of forceCalResults) {
-    summaryHtml += `<div><span class="label">${r.name}</span><span>ADC ${r.peak_adc} @ R${r.row} C${r.col}</span></div>`;
+  let summaryHtml = `<div><span class="label">Vertebra</span><span>${forceCalVertebra}</span></div>`;
+  summaryHtml += `<div><span class="label">Points</span><span>${forceCalPoints.length}</span></div>`;
+  for (const p of forceCalPoints) {
+    const fn = ((p.weight_grams / 1000.0) * 9.81).toFixed(3);
+    summaryHtml += `<div><span class="label">${p.weight_grams}g (${fn} N)</span><span>ADC ${p.peak_adc}</span></div>`;
   }
   document.getElementById('force-summary').innerHTML = summaryHtml;
-  document.getElementById('force-summary').style.display = 'block';
-  document.getElementById('force-result').textContent = '';
+
+  // Draw force curve preview
+  drawForceCurvePreview(coeffs, forceCalPoints);
+  updateForceVertebraStatus();
 }
 
-async function acceptForceCalibration() {
-  const grams = parseFloat(document.getElementById('force-weight-input').value) || 300;
-  document.getElementById('force-accept-btn').disabled = true;
-  document.getElementById('force-accept-btn').textContent = 'Computing...';
+function drawForceCurvePreview(coeffs, points) {
+  const canvas = document.getElementById('force-curve-canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const pad = { top: 10, right: 10, bottom: 25, left: 45 };
+  const pw = w - pad.left - pad.right;
+  const ph = h - pad.top - pad.bottom;
 
-  const gainMap = await pywebview.api.compute_force_calibration(grams, forceCalResults);
-  if (gainMap) {
-    forceGainMap = gainMap;
-    forceCalEnabled = true;
-    document.getElementById('force-cal-toggle').checked = true;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#141428';
+  ctx.fillRect(0, 0, w, h);
+
+  // Find data range
+  const adcMax = Math.max(...points.map(p => p.peak_adc), 1) * 1.1;
+  const forceMax = Math.max(...points.map(p => (p.weight_grams / 1000.0) * 9.81), 0.1) * 1.2;
+  const [a0, a1, a2, a3] = coeffs;
+
+  // Draw polynomial curve
+  ctx.beginPath();
+  ctx.strokeStyle = '#4a90d9';
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= pw; i++) {
+    const adc = (i / pw) * adcMax;
+    const f = Math.max(0, a0 + a1 * adc + a2 * adc * adc + a3 * adc * adc * adc);
+    const x = pad.left + i;
+    const y = pad.top + ph - (f / forceMax) * ph;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Draw calibration points
+  ctx.fillStyle = '#ffc107';
+  for (const p of points) {
+    const x = pad.left + (p.peak_adc / adcMax) * pw;
+    const f = (p.weight_grams / 1000.0) * 9.81;
+    const y = pad.top + ph - (f / forceMax) * ph;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  document.getElementById('force-cal-modal').style.display = 'none';
-  document.getElementById('force-accept-btn').disabled = false;
-  document.getElementById('force-accept-btn').textContent = 'Accept';
+  // Axes labels
+  ctx.fillStyle = '#555';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('ADC', pad.left + pw / 2, h - 3);
+  ctx.save();
+  ctx.translate(10, pad.top + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Force (N)', 0, 0);
+  ctx.restore();
+}
 
-  // Save the enabled state
+async function acceptForceCalibrationNew() {
+  forceCalEnabled = true;
+  document.getElementById('force-cal-toggle').checked = true;
+  document.getElementById('force-cal-modal').style.display = 'none';
+
   try {
     const settings = await pywebview.api.get_settings();
-    settings.force_cal_enabled = forceCalEnabled;
+    settings.force_cal_enabled = true;
     await pywebview.api.save_settings(settings);
   } catch(e) {}
 
   if (latestData) drawGrid(latestData);
 }
 
+function calibrateNextVertebra() {
+  // Find next uncalibrated vertebra
+  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
+  let next = null;
+  for (const label of ['L1', 'L2', 'L3', 'L4', 'L5']) {
+    if (markers[label] && !forcePolyCoeffs[label]) { next = label; break; }
+  }
+  if (!next) {
+    document.getElementById('force-instruction').textContent = 'All vertebrae calibrated!';
+    return;
+  }
+  document.getElementById('force-vertebra-select').value = next;
+  startForceCalibrationNew();
+}
+
 function redoForceCalibration() {
-  forceCalStep = 0;
-  forceCalResults = [];
-  document.getElementById('force-weight-section').style.display = 'flex';
+  forceCalPoints = [];
+  document.getElementById('force-summary-section').style.display = 'none';
+  document.getElementById('force-vertebra-section').style.display = '';
+  document.getElementById('force-capture-section').style.display = 'none';
   document.getElementById('force-start-btn').style.display = '';
   document.getElementById('force-capture-btn').style.display = 'none';
+  document.getElementById('force-add-btn').style.display = 'none';
+  document.getElementById('force-done-btn').style.display = 'none';
   document.getElementById('force-accept-btn').style.display = 'none';
+  document.getElementById('force-next-btn').style.display = 'none';
   document.getElementById('force-redo-btn').style.display = 'none';
-  document.getElementById('force-progress').innerHTML = '';
-  document.getElementById('force-result').textContent = '';
-  document.getElementById('force-summary').style.display = 'none';
-  document.getElementById('force-instruction').innerHTML =
-    'Calibrate force readings using a known weight.<br>Place the weight at 5 positions (center + 4 corners).';
+  document.getElementById('force-instruction').textContent =
+    'Select a vertebra, then add multiple known weights to build a calibration curve.';
+  updateForceVertebraStatus();
 }
 
 function cancelForceCalibration() {
   document.getElementById('force-cal-modal').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// Session Replay
+// ═══════════════════════════════════════════════════════════
+
+let replayFrames = [];
+let replayIndex = 0;
+let replayPlaying = false;
+let replaySpeed = 1.0;
+let replayTimer = null;
+let replayActive = false;
+let lastSessionCsvPath = '';  // set when session stops
+
+async function openReplayPicker() {
+  document.getElementById('replay-picker-modal').style.display = 'flex';
+  document.getElementById('replay-session-list').innerHTML = 'Loading...';
+
+  try {
+    const recordings = await pywebview.api.list_recordings();
+    if (!recordings || recordings.length === 0) {
+      document.getElementById('replay-session-list').innerHTML = '<span style="color:var(--text-dim)">No recordings found.</span>';
+      return;
+    }
+    let html = '';
+    for (const session of recordings) {
+      const types = Object.keys(session.files).join(', ');
+      html += `<div style="padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">`;
+      html += `<span>${session.name} <span style="color:var(--text-dim);font-size:11px">(${types})</span></span>`;
+      html += `<div style="display:flex;gap:4px">`;
+      if (session.files.filtered) {
+        html += `<button class="btn btn-sm btn-primary" onclick="startReplay('${session.files.filtered.replace(/\\/g, '\\\\')}')">Filtered</button>`;
+      }
+      if (session.files.raw) {
+        html += `<button class="btn btn-sm" onclick="startReplay('${session.files.raw.replace(/\\/g, '\\\\')}')">Raw</button>`;
+      }
+      if (session.files.force) {
+        html += `<button class="btn btn-sm" onclick="startReplay('${session.files.force.replace(/\\/g, '\\\\')}')">Force</button>`;
+      }
+      html += `</div></div>`;
+    }
+    document.getElementById('replay-session-list').innerHTML = html;
+  } catch(e) {
+    document.getElementById('replay-session-list').innerHTML = 'Error loading recordings.';
+  }
+}
+
+async function startReplay(csvPath) {
+  document.getElementById('replay-picker-modal').style.display = 'none';
+  document.getElementById('results-overlay').style.display = 'none';
+
+  const result = await pywebview.api.load_recording(csvPath);
+  if (!result || !result.frames || result.frames.length === 0) {
+    showError('Failed to load recording or file is empty.');
+    return;
+  }
+
+  replayFrames = result.frames;
+  replayIndex = 0;
+  replayPlaying = false;
+  replaySpeed = parseFloat(document.getElementById('replay-speed').value) || 1.0;
+  replayActive = true;
+
+  // Show replay UI
+  document.getElementById('replay-bar').style.display = 'flex';
+  document.getElementById('replay-scrub').max = replayFrames.length - 1;
+  document.getElementById('replay-scrub').value = 0;
+  document.getElementById('graph-panel').classList.add('visible');
+  document.getElementById('content-main').classList.add('side-by-side');
+  document.getElementById('content-main').offsetHeight;
+  resizeCanvas();
+  resizeGraph();
+  resetGraph();
+
+  // Show first frame
+  renderReplayFrame(0);
+  updateReplayInfo();
+}
+
+function renderReplayFrame(idx) {
+  if (idx < 0 || idx >= replayFrames.length) return;
+  const frame = replayFrames[idx];
+  const values = frame.values;
+
+  // Reshape flat array to 2D grid
+  const grid = [];
+  for (let r = 0; r < ROWS; r++) {
+    grid.push(values.slice(r * COLS, (r + 1) * COLS));
+  }
+
+  const data = {
+    grid: grid,
+    raw: grid,
+    rows: ROWS,
+    cols: COLS,
+    hz: 0,
+    pressed: 0,
+    calibrating: false,
+    spine_markers: latestData ? latestData.spine_markers || {} : {},
+    exercise_region: null,
+    vertebra_settings: latestData ? latestData.vertebra_settings || {} : {},
+  };
+
+  drawGrid(data);
+  updateGraph(data);
+}
+
+function updateReplayInfo() {
+  const total = replayFrames.length;
+  const ts = replayFrames[replayIndex] ? replayFrames[replayIndex].ts : 0;
+  const totalTs = replayFrames[total - 1] ? replayFrames[total - 1].ts : 0;
+  document.getElementById('replay-frame-info').textContent =
+    `Frame ${replayIndex + 1}/${total} — ${(ts / 1000).toFixed(1)}s / ${(totalTs / 1000).toFixed(1)}s`;
+  document.getElementById('replay-scrub').value = replayIndex;
+}
+
+function toggleReplayPlay() {
+  if (replayPlaying) {
+    pauseReplay();
+  } else {
+    replayPlaying = true;
+    document.getElementById('replay-play-btn').textContent = 'Pause';
+    replayTick();
+  }
+}
+
+function pauseReplay() {
+  replayPlaying = false;
+  if (replayTimer) { clearTimeout(replayTimer); replayTimer = null; }
+  document.getElementById('replay-play-btn').textContent = 'Play';
+}
+
+function replayTick() {
+  if (!replayPlaying || replayIndex >= replayFrames.length - 1) {
+    pauseReplay();
+    return;
+  }
+  renderReplayFrame(replayIndex);
+  updateReplayInfo();
+
+  const currentTs = replayFrames[replayIndex].ts;
+  replayIndex++;
+  const nextTs = replayFrames[replayIndex] ? replayFrames[replayIndex].ts : currentTs;
+  const dt = Math.max(1, (nextTs - currentTs) / replaySpeed);
+  replayTimer = setTimeout(replayTick, dt);
+}
+
+function scrubReplay(val) {
+  replayIndex = parseInt(val);
+  renderReplayFrame(replayIndex);
+  updateReplayInfo();
+}
+
+function replayStepBack() {
+  pauseReplay();
+  if (replayIndex > 0) replayIndex--;
+  renderReplayFrame(replayIndex);
+  updateReplayInfo();
+}
+
+function replayStepForward() {
+  pauseReplay();
+  if (replayIndex < replayFrames.length - 1) replayIndex++;
+  renderReplayFrame(replayIndex);
+  updateReplayInfo();
+}
+
+function setReplaySpeed(val) {
+  replaySpeed = parseFloat(val) || 1.0;
+}
+
+function stopReplay() {
+  pauseReplay();
+  replayActive = false;
+  replayFrames = [];
+  replayIndex = 0;
+  document.getElementById('replay-bar').style.display = 'none';
+  document.getElementById('graph-panel').classList.remove('visible');
+  document.getElementById('content-main').classList.remove('side-by-side');
+  setTimeout(() => resizeCanvas(), 50);
+}
+
+function replayLastSession() {
+  if (lastSessionCsvPath) {
+    startReplay(lastSessionCsvPath);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
