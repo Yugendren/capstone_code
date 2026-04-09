@@ -1,4 +1,4 @@
-"""PressureMat backend — serial reader, grid processing, sessions, calibration, WebSocket."""
+"""PressureMat backend — serial reader, grid processing, sessions, calibration, WebSocket."""  # noqa
 
 import asyncio
 import csv
