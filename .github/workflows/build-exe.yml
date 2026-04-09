@@ -1,0 +1,35 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [esp32-breadboard]
+    paths:
+      - 'tests/gui/**'
+      - '.github/workflows/build-exe.yml'
+  workflow_dispatch:  # allow manual trigger
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller pyserial websockets pywebview
+          pip install -r tests/gui/requirements.txt
+
+      - name: Build EXE
+        working-directory: tests/gui
+        run: pyinstaller --clean --noconfirm pressuremat.spec
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PressureMat-Windows
+          path: tests/gui/dist/PressureMat.exe
+          retention-days: 30
