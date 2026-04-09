@@ -485,6 +485,7 @@ class PressureBackend:
 
         log.info("Spine %s: R%d C%d (avg %.0f, %d frames)",
                  label, peak_row, peak_col, avg[peak_idx], n)
+        self.save_spine_calibration()
         return {"row": peak_row, "col": peak_col, "label": label}
 
     def save_spine_calibration(self):
