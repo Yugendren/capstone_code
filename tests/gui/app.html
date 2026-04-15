@@ -1680,6 +1680,12 @@ function updateGraph(data) {
         graphCurrentLabel = graphTracking;
       }
     }
+
+    // Snap to 0 when nothing in the region is being meaningfully pressed.
+    // Without this, Gaussian tails (debug mode) and velostat recovery
+    // (real hardware) keep the region-peak elevated for seconds after
+    // pressure has obviously left the area.
+    if (trackVal < threshLow) trackVal = 0;
   }
 
   // Detect which vertebra has peak pressure (for location tracking)
@@ -1795,21 +1801,30 @@ function drawGraph() {
 
   if (graphCount < 1) return;
 
-  const maxSamples = Math.min(graphCount, Math.floor(plotW / 2));
+  // Very short visible window (~2 s at 30 FPS) so history can't get
+  // confused with the live value — a spike that just ended scrolls off
+  // within 2 seconds instead of lingering for 10+ s of visible scroll-off.
+  const MAX_VISIBLE_SAMPLES = 60;
+  const maxSamples = Math.min(graphCount, MAX_VISIBLE_SAMPLES, Math.floor(plotW / 2));
   const startIdx = graphCount > maxSamples
     ? (graphHead - maxSamples + GRAPH_MAX_SAMPLES) % GRAPH_MAX_SAMPLES
     : (graphHead - graphCount + GRAPH_MAX_SAMPLES) % GRAPH_MAX_SAMPLES;
 
-  // Draw data line
+  // Draw data line. Use a left-to-right opacity gradient so older history
+  // fades out, making the current value (rightmost pixel) the visual focus —
+  // otherwise the tail of a past spike looks like present lag.
+  let latestX = pad.left + plotW;
+  let latestY = yForVal(0);
   if (maxSamples === 1) {
     const val = graphBuffer[startIdx];
-    const x = pad.left + plotW / 2;
-    const y = yForVal(val);
-    graphCtx.beginPath();
-    graphCtx.arc(x, y, 3, 0, Math.PI * 2);
-    graphCtx.fillStyle = '#4a90d9';
-    graphCtx.fill();
+    latestX = pad.left + plotW / 2;
+    latestY = yForVal(val);
   } else {
+    const lineGrad = graphCtx.createLinearGradient(pad.left, 0, pad.left + plotW, 0);
+    lineGrad.addColorStop(0, 'rgba(74,144,217,0.08)');
+    lineGrad.addColorStop(0.7, 'rgba(74,144,217,0.35)');
+    lineGrad.addColorStop(0.85, 'rgba(74,144,217,0.75)');
+    lineGrad.addColorStop(1, 'rgba(74,144,217,1.0)');
     graphCtx.beginPath();
     for (let i = 0; i < maxSamples; i++) {
       const idx = (startIdx + i) % GRAPH_MAX_SAMPLES;
@@ -1817,11 +1832,28 @@ function drawGraph() {
       const x = pad.left + (i / (maxSamples - 1)) * plotW;
       const y = yForVal(val);
       if (i === 0) graphCtx.moveTo(x, y); else graphCtx.lineTo(x, y);
+      if (i === maxSamples - 1) { latestX = x; latestY = y; }
     }
-    graphCtx.strokeStyle = '#4a90d9';
+    graphCtx.strokeStyle = lineGrad;
     graphCtx.lineWidth = 2;
     graphCtx.stroke();
   }
+
+  // "Now" marker: bright dot at the current value, plus a faint vertical
+  // line at the right edge so the eye locks to the live reading.
+  graphCtx.strokeStyle = 'rgba(74,144,217,0.25)';
+  graphCtx.lineWidth = 1;
+  graphCtx.beginPath();
+  graphCtx.moveTo(latestX, pad.top);
+  graphCtx.lineTo(latestX, pad.top + plotH);
+  graphCtx.stroke();
+  graphCtx.beginPath();
+  graphCtx.arc(latestX, latestY, 5, 0, Math.PI * 2);
+  graphCtx.fillStyle = '#4a90d9';
+  graphCtx.fill();
+  graphCtx.strokeStyle = '#fff';
+  graphCtx.lineWidth = 1.5;
+  graphCtx.stroke();
 
   // Vertebra location band (bottom strip)
   const bandY = h - locBandH - 2;
@@ -1858,7 +1890,17 @@ function drawGraph() {
   graphCtx.fillStyle = '#888';
   graphCtx.font = '13px sans-serif';
   graphCtx.textAlign = 'center';
-  graphCtx.fillText(graphForceMode ? 'Time — Total Lumbar Force' : 'Time (scrolling)', pad.left + plotW / 2, h - 5);
+  graphCtx.fillText(graphForceMode ? 'Time — Total Lumbar Force' : 'Time (last 2s)', pad.left + plotW / 2, h - 5);
+
+  // Big live value in the top-right corner so the current reading is
+  // impossible to miss regardless of the trace shape.
+  const liveVal = graphBuffer[(graphHead - 1 + GRAPH_MAX_SAMPLES) % GRAPH_MAX_SAMPLES];
+  const liveText = graphForceMode ? liveVal.toFixed(2) + ' N' : Math.round(liveVal).toString();
+  graphCtx.fillStyle = liveVal > 0 ? '#4a90d9' : '#555';
+  graphCtx.font = 'bold 28px monospace';
+  graphCtx.textAlign = 'right';
+  graphCtx.textBaseline = 'top';
+  graphCtx.fillText(liveText, pad.left + plotW - 6, pad.top + 4);
 }
 
 function setGraphMode(m) {
