@@ -78,22 +78,6 @@ class ApiHandler:
         with backend.lock:
             backend.start_calibration()
 
-    def calibrate_spine_point(self, label):
-        # Runs in background since it blocks for ~1.2s
-        return backend.start_spine_calibration(label)
-
-    def save_spine_calibration(self):
-        backend.save_spine_calibration()
-
-    def set_spine_markers(self, markers):
-        backend.set_spine_markers(markers)
-
-    def load_calibration(self):
-        return backend.spine_markers if backend.spine_markers else None
-
-    def clear_calibration(self):
-        backend.clear_spine_calibration()
-
     def set_noise_floor(self, value):
         with backend.lock:
             backend.noise_floor = int(value)
@@ -165,17 +149,24 @@ class ApiHandler:
         return backend.reset_vertebra_settings()
 
 
+_ws_error = {"message": ""}
+
+
 def run_ws_loop():
     """Run the asyncio+WS event loop in a daemon thread."""
-    backend.start_ws_server()
+    try:
+        backend.start_ws_server()
+    except Exception as e:
+        _ws_error["message"] = str(e)
+        log.error("WebSocket server failed to start: %s", e)
 
 
 def on_closed():
     """Clean up on window close."""
-    settings = backend.load_settings()
-    settings["last_port"] = backend.port_name
-    settings["noise_floor"] = backend.noise_floor
-    backend.save_settings(settings)
+    backend.update_settings({
+        "last_port": backend.port_name,
+        "noise_floor": backend.noise_floor,
+    })
     backend.disconnect()
 
 
@@ -186,6 +177,17 @@ def main():
 
     # Give WS server a moment to bind
     time.sleep(0.3)
+
+    if _ws_error["message"]:
+        # WS could not bind — surface a hard error instead of a blank UI
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+            root = tk.Tk(); root.withdraw()
+            messagebox.showerror("PressureMat", f"Cannot start: {_ws_error['message']}")
+        except Exception:
+            print(f"FATAL: {_ws_error['message']}", file=sys.stderr)
+        sys.exit(1)
 
     api = ApiHandler()
 

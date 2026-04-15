@@ -40,7 +40,7 @@
     gap: 24px;
   }
   #connection-screen .logo { font-size: 42px; font-weight: 700; color: var(--accent); letter-spacing: 4px; }
-  #connection-screen .subtitle { font-size: 14px; color: var(--text-dim); }
+  #connection-screen .subtitle { font-size: 16px; color: var(--text-dim); }
   .port-panel {
     background: var(--bg-surface);
     border: 1px solid var(--border);
@@ -51,7 +51,7 @@
     gap: 16px;
     min-width: 380px;
   }
-  .port-panel label { font-size: 13px; color: var(--text-dim); }
+  .port-panel label { font-size: 17px; color: var(--text-dim); }
   .port-row { display: flex; gap: 8px; }
   .port-row select {
     flex: 1;
@@ -60,7 +60,7 @@
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 8px 12px;
-    font-size: 14px;
+    font-size: 16px;
     cursor: pointer;
   }
   .port-row select option.esp32 { color: var(--accent); font-weight: 600; }
@@ -72,7 +72,7 @@
     padding: 8px 18px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 17px;
     transition: background 0.15s;
   }
   .btn:hover { background: #2a3f60; }
@@ -82,11 +82,11 @@
   .btn-danger:hover { background: #c82333; }
   .btn-success { background: var(--success); color: #fff; border-color: var(--success); }
   .btn-success:hover { background: #218838; }
-  .btn-sm { padding: 4px 12px; font-size: 12px; }
+  .btn-sm { padding: 6px 14px; font-size: 14px; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .connect-btn { width: 100%; padding: 10px; font-size: 15px; }
-  .conn-status { font-size: 13px; text-align: center; min-height: 20px; }
+  .connect-btn { width: 100%; padding: 10px; font-size: 17px; }
+  .conn-status { font-size: 17px; text-align: center; min-height: 20px; }
   .conn-status.error { color: var(--danger); }
   .conn-status.ok { color: var(--success); }
 
@@ -97,20 +97,21 @@
   .topbar {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 14px;
+    gap: 16px;
+    padding: 8px 16px;
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     flex-wrap: wrap;
+    row-gap: 6px;
   }
-  .topbar-section { display: flex; align-items: center; gap: 8px; }
-  .topbar-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+  .topbar-section { display: flex; align-items: center; gap: 10px; }
+  .topbar-divider { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
   .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
   .status-dot.on { background: var(--success); box-shadow: 0 0 6px var(--success); }
   .status-dot.off { background: var(--danger); }
-  .port-label { font-size: 13px; color: var(--text-dim); }
-  .hz-label { font-size: 13px; color: var(--text-dim); }
+  .port-label { font-size: 17px; color: var(--text-dim); }
+  .hz-label { font-size: 17px; color: var(--text-dim); }
 
   .exercise-select {
     background: var(--bg-input);
@@ -118,30 +119,30 @@
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 4px 8px;
-    font-size: 13px;
+    font-size: 17px;
   }
 
-  .session-badge { font-size: 12px; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
+  .session-badge { font-size: 16px; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
   .badge-idle { background: #2a2a4a; color: #888; }
   .badge-recording { background: #3a1a1a; color: #f66; animation: badge-pulse 1.5s infinite; }
   .badge-stopped { background: #1a3a1a; color: #6f6; }
   @keyframes badge-pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
 
-  .timer { font-size: 18px; font-weight: 700; font-family: 'Consolas', monospace; letter-spacing: 1px; }
+  .timer { font-size: 26px; font-weight: 700; font-family: 'Consolas', monospace; letter-spacing: 1px; }
 
   .topbar-alert { transition: background 0.3s; }
   .topbar-alert.flash { background: rgba(220, 53, 69, 0.3); }
 
   .mute-btn {
     background: none; border: none; color: var(--text-dim);
-    font-size: 18px; cursor: pointer; padding: 2px 6px;
+    font-size: 26px; cursor: pointer; padding: 2px 6px;
   }
   .mute-btn:hover { color: var(--text); }
   .mute-btn.muted { color: var(--danger); }
 
   .gear-btn {
     background: none; border: none; color: var(--text-dim);
-    font-size: 18px; cursor: pointer; padding: 2px 6px;
+    font-size: 26px; cursor: pointer; padding: 2px 6px;
   }
   .gear-btn:hover { color: var(--text); }
 
@@ -162,7 +163,7 @@
     display: flex;
     gap: 12px;
     align-items: center;
-    font-size: 12px;
+    font-size: 16px;
     color: var(--text-dim);
     flex-wrap: wrap;
     justify-content: center;
@@ -174,7 +175,7 @@
 
   /* Color legend */
   .color-legend {
-    display: flex; gap: 12px; font-size: 11px;
+    display: flex; gap: 12px; font-size: 16px;
     color: var(--text-dim); align-items: center;
   }
   .legend-swatch {
@@ -235,7 +236,7 @@
   #graph-canvas { display: block; width: 100%; height: 100%; }
   .graph-controls {
     display: flex; gap: 10px; align-items: center;
-    font-size: 12px; color: var(--text-dim); justify-content: center;
+    font-size: 16px; color: var(--text-dim); justify-content: center;
     flex-shrink: 0;
   }
 
@@ -247,12 +248,13 @@
   }
   .vc-panel {
     background: var(--bg-surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 28px 36px; min-width: 440px; text-align: center;
+    border-radius: 8px; padding: 28px 36px; min-width: 460px; text-align: center;
+    max-height: 90vh; overflow-y: auto;
   }
-  .vc-panel h3 { margin-bottom: 16px; font-size: 18px; }
+  .vc-panel h3 { margin-bottom: 16px; font-size: 22px; }
   .vc-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
   .vc-step {
-    display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 17px;
   }
   .vc-dot {
     width: 16px; height: 16px; border-radius: 50%;
@@ -261,15 +263,15 @@
   }
   .vc-dot.done { background: var(--success); border-color: var(--success); }
   .vc-dot.active { border-color: var(--accent); background: rgba(74,144,217,0.2); }
-  .vc-instruction { font-size: 15px; color: var(--text); margin-bottom: 12px; min-height: 40px; }
-  .vc-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 16px; }
-  .vc-result { font-size: 13px; color: var(--success); margin-top: 10px; min-height: 20px; }
+  .vc-instruction { font-size: 17px; color: var(--text); margin-bottom: 12px; min-height: 40px; }
+  .vc-sub { font-size: 16px; color: var(--text-dim); margin-bottom: 16px; }
+  .vc-result { font-size: 17px; color: var(--success); margin-top: 10px; min-height: 20px; }
   .vc-actions { display: flex; gap: 10px; justify-content: center; }
 
   /* Tooltip */
   #tooltip {
     position: fixed; background: rgba(0,0,0,0.9); color: #ff9;
-    padding: 5px 10px; border-radius: 4px; font-size: 12px;
+    padding: 5px 10px; border-radius: 4px; font-size: 16px;
     pointer-events: none; display: none; z-index: 100; white-space: nowrap;
   }
 
@@ -278,7 +280,7 @@
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.7); display: none;
     align-items: center; justify-content: center;
-    font-size: 22px; color: var(--warning); z-index: 50;
+    font-size: 28px; color: var(--warning); z-index: 50;
   }
 
   /* Countdown overlay */
@@ -293,35 +295,11 @@
     text-shadow: 0 0 40px rgba(74,144,217,0.5);
     transition: transform 0.2s, opacity 0.2s;
   }
-  .countdown-label { font-size: 20px; color: var(--text-dim); }
+  .countdown-label { font-size: 24px; color: var(--text-dim); }
   .countdown-go {
     font-size: 100px; font-weight: 800; color: var(--success);
     text-shadow: 0 0 40px rgba(40,167,69,0.6);
   }
-
-  /* Spine calibration modal */
-  #spine-modal {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6); display: none;
-    align-items: center; justify-content: center; z-index: 60;
-  }
-  .spine-panel {
-    background: var(--bg-surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 28px 36px; min-width: 360px; text-align: center;
-  }
-  .spine-panel h3 { margin-bottom: 16px; font-size: 18px; }
-  .spine-progress { display: flex; gap: 14px; justify-content: center; margin-bottom: 20px; }
-  .spine-step { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; }
-  .spine-dot {
-    width: 18px; height: 18px; border-radius: 50%;
-    border: 2px solid var(--border); display: flex;
-    align-items: center; justify-content: center; font-size: 10px;
-  }
-  .spine-dot.done { background: var(--success); border-color: var(--success); }
-  .spine-dot.active { border-color: var(--accent); background: rgba(74,144,217,0.2); }
-  .spine-instruction { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; min-height: 40px; }
-  .spine-actions { display: flex; gap: 10px; justify-content: center; }
-  .spine-result { font-size: 13px; color: var(--success); margin-top: 10px; min-height: 20px; }
 
   /* Force calibration modal */
   #force-cal-modal {
@@ -331,30 +309,31 @@
   }
   .force-panel {
     background: var(--bg-surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 28px 36px; min-width: 440px; text-align: center;
+    border-radius: 8px; padding: 28px 36px; min-width: 480px; text-align: center;
+    max-height: 90vh; overflow-y: auto;
   }
-  .force-panel h3 { margin-bottom: 16px; font-size: 18px; }
+  .force-panel h3 { margin-bottom: 16px; font-size: 22px; }
   .force-progress { display: flex; gap: 14px; justify-content: center; margin-bottom: 20px; }
-  .force-step { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; }
+  .force-step { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 16px; }
   .force-dot {
-    width: 18px; height: 18px; border-radius: 50%;
+    width: 22px; height: 22px; border-radius: 50%;
     border: 2px solid var(--border); display: flex;
-    align-items: center; justify-content: center; font-size: 10px;
+    align-items: center; justify-content: center; font-size: 13px;
   }
   .force-dot.done { background: var(--success); border-color: var(--success); }
   .force-dot.active { border-color: var(--accent); background: rgba(74,144,217,0.2); }
-  .force-instruction { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; min-height: 40px; }
+  .force-instruction { font-size: 16px; color: var(--text-dim); margin-bottom: 16px; min-height: 40px; }
   .force-actions { display: flex; gap: 10px; justify-content: center; }
-  .force-result { font-size: 13px; color: var(--success); margin-top: 10px; min-height: 20px; }
+  .force-result { font-size: 17px; color: var(--success); margin-top: 10px; min-height: 20px; }
   .force-weight-input {
     display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 16px;
   }
   .force-weight-input input {
     background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
-    border-radius: 4px; padding: 6px 10px; font-size: 14px; width: 100px; text-align: center;
+    border-radius: 4px; padding: 6px 10px; font-size: 16px; width: 100px; text-align: center;
   }
-  .force-weight-input span { font-size: 13px; color: var(--text-dim); }
-  .force-summary { text-align: left; font-size: 13px; margin: 12px 0; }
+  .force-weight-input span { font-size: 17px; color: var(--text-dim); }
+  .force-summary { text-align: left; font-size: 17px; margin: 12px 0; }
   .force-summary div { padding: 3px 0; display: flex; justify-content: space-between; }
 
   /* Session results overlay */
@@ -365,10 +344,11 @@
   }
   .results-panel {
     background: var(--bg-surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 28px 36px; min-width: 380px; text-align: center;
+    border-radius: 8px; padding: 28px 36px; min-width: 420px; text-align: center;
+    max-height: 90vh; overflow-y: auto;
   }
-  .results-panel h3 { margin-bottom: 16px; font-size: 18px; }
-  .results-stats { text-align: left; font-size: 14px; margin-bottom: 16px; }
+  .results-panel h3 { margin-bottom: 16px; font-size: 22px; }
+  .results-stats { text-align: left; font-size: 16px; margin-bottom: 16px; }
   .results-stats div { padding: 4px 0; display: flex; justify-content: space-between; }
   .results-stats .label { color: var(--text-dim); }
   .results-check { color: var(--success); margin-right: 6px; }
@@ -382,18 +362,19 @@
   }
   .settings-panel {
     background: var(--bg-surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 28px 36px; min-width: 420px;
+    border-radius: 8px; padding: 28px 36px; min-width: 480px;
+    max-height: 90vh; overflow-y: auto;
   }
-  .settings-panel h3 { margin-bottom: 20px; font-size: 18px; text-align: center; }
+  .settings-panel h3 { margin-bottom: 20px; font-size: 22px; text-align: center; }
   .setting-group { margin-bottom: 18px; }
-  .setting-group label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  .setting-group label { display: block; font-size: 17px; color: var(--text-dim); margin-bottom: 6px; }
   .setting-group select, .setting-group input[type=number] {
     background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
-    border-radius: 4px; padding: 6px 10px; font-size: 13px; width: 100%;
+    border-radius: 4px; padding: 6px 10px; font-size: 17px; width: 100%;
   }
   .setting-group input[type=range] { width: 100%; accent-color: var(--accent); }
   .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .setting-row label { font-size: 13px; color: var(--text-dim); margin-bottom: 0; }
+  .setting-row label { font-size: 17px; color: var(--text-dim); margin-bottom: 0; }
   .settings-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
 
   /* Flash firmware modal */
@@ -413,14 +394,14 @@
 
   /* Nearest vertebra */
   .nearest-label {
-    font-size: 13px; color: var(--text-dim); padding: 2px 8px;
+    font-size: 17px; color: var(--text-dim); padding: 2px 8px;
     background: rgba(0,255,136,0.1); border-radius: 4px;
   }
 
   /* Error banner */
   .error-banner {
     display: none; background: var(--danger); color: #fff;
-    padding: 8px 16px; text-align: center; font-size: 13px; flex-shrink: 0;
+    padding: 8px 16px; text-align: center; font-size: 17px; flex-shrink: 0;
   }
   .error-banner .btn { margin-left: 12px; color: #fff; border-color: #fff; }
 
@@ -445,7 +426,7 @@
     <button class="btn connect-btn" style="margin-top:4px;background:#2a3a2a;border-color:#4a4;color:#8c8" onclick="doConnectDebug()">Debug Mode (No Device)</button>
     <div class="conn-status" id="conn-status"></div>
     <div style="text-align:center;margin-top:4px">
-      <a href="#" onclick="openFlashModal();return false" style="color:var(--text-dim);font-size:12px;text-decoration:none">
+      <a href="#" onclick="openFlashModal();return false" style="color:var(--text-dim);font-size:16px;text-decoration:none">
         Flash Firmware to Device
       </a>
     </div>
@@ -465,7 +446,7 @@
       <span class="status-dot on" id="main-status-dot"></span>
       <span class="port-label" id="main-port-label">COM3</span>
       <span class="hz-label" id="main-hz">-- Hz</span>
-      <span id="heatmap-debug-peak" style="font-size:11px;color:#ffc107;font-family:monospace">Peak: --</span>
+      <span id="heatmap-debug-peak" style="font-size:16px;color:#ffc107;font-family:monospace">Peak: --</span>
     </div>
     <div class="topbar-divider"></div>
     <div class="topbar-section">
@@ -485,15 +466,11 @@
     <div class="topbar-divider"></div>
     <div class="topbar-section">
       <span class="nearest-label" id="nearest-label" style="display:none">Peak near: --</span>
-      <button class="btn btn-sm" onclick="openSpineCalibration()">Calibrate Spine</button>
-      <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
-        <input type="checkbox" id="spine-overlay-toggle" checked onchange="showSpineOverlay=this.checked"> Spine
-      </label>
-      <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
+      <label style="font-size:16px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
         <input type="checkbox" id="vertebra-regions-toggle" checked onchange="showVertebraRegions=this.checked; if(latestData) drawGrid(latestData)"> Regions
       </label>
       <button class="btn btn-sm" onclick="openForceCalibration()">Calibrate Force</button>
-      <label style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
+      <label style="font-size:16px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
         <input type="checkbox" id="force-cal-toggle" onchange="forceCalEnabled=this.checked; if(latestData) drawGrid(latestData)"> Force
       </label>
     </div>
@@ -531,12 +508,12 @@
       <div id="graph-panel">
         <div class="graph-controls" id="graph-controls">
           <span id="tracking-label">Tracking: -- (auto)</span>
-          <span id="graph-debug-val" style="font-size:12px;color:#4a90d9;font-family:monospace;min-width:120px">Val: --</span>
+          <span id="graph-debug-val" style="font-size:16px;color:#4a90d9;font-family:monospace;min-width:120px">Val: --</span>
           <div class="mode-toggle">
             <button class="btn btn-sm active" id="btn-amplitude" onclick="setGraphMode('amplitude')">Amplitude</button>
             <button class="btn btn-sm" id="btn-displacement" onclick="setGraphMode('displacement')">Displacement</button>
           </div>
-          <span id="displacement-note" style="display:none;font-size:10px;color:#a88;font-style:italic">Note: visual representation only, not actual displacement</span>
+          <span id="displacement-note" style="display:none;font-size:15px;color:#a88;font-style:italic">Note: visual representation only, not actual displacement</span>
         </div>
         <div id="graph-wrapper">
           <canvas id="graph-canvas"></canvas>
@@ -546,18 +523,6 @@
   </div>
 </div>
 
-<!-- Spine preview bar — shown after scan so user sees heatmap with detected points -->
-<div id="spine-preview-bar" style="display:none; position:fixed; bottom:0; left:0; right:0;
-    background:var(--bg-surface); border-top:2px solid var(--accent);
-    padding:10px 20px; z-index:70; display:none;
-    justify-content:center; align-items:center; gap:20px; flex-wrap:wrap;">
-  <span style="font-size:14px; color:var(--text);" id="spine-preview-text">
-    Review the detected spine positions on the heatmap (orange dots).
-  </span>
-  <button class="btn btn-success" onclick="acceptSpinePreview()">Accept</button>
-  <button class="btn btn-danger" onclick="redoSpinePreview()">Redo</button>
-</div>
-
 <!-- Overlays -->
 <div id="calibrating-overlay">Calibrating baseline...</div>
 <div id="tooltip"></div>
@@ -565,25 +530,6 @@
 <div id="countdown-overlay">
   <div class="countdown-label">Get Ready...</div>
   <div class="countdown-number" id="countdown-number">3</div>
-</div>
-
-<div id="spine-modal">
-  <div class="spine-panel" style="min-width:440px">
-    <h3>Spine Calibration</h3>
-    <div class="spine-instruction" id="spine-instruction">
-      Lie face-up on the mat and slowly roll/drag along your spine.<br>
-      The heatmap will show a persistent trail of your movement.<br>
-      The 5 strongest points will be auto-detected as L1–L5.
-    </div>
-    <div class="spine-progress" id="spine-progress"></div>
-    <div class="spine-result" id="spine-result"></div>
-    <div class="spine-actions">
-      <button class="btn btn-primary" id="spine-start-btn" onclick="startSpineScan()">Start Scan</button>
-      <button class="btn btn-success" id="spine-confirm-btn" onclick="confirmSpine()" style="display:none">Confirm</button>
-      <button class="btn" id="spine-restart-btn" onclick="restartSpine()" style="display:none">Redo</button>
-      <button class="btn" id="spine-cancel-btn" onclick="cancelSpine()">Cancel</button>
-    </div>
-  </div>
 </div>
 
 <div id="force-cal-modal">
@@ -597,23 +543,23 @@
     <div id="force-vertebra-section">
       <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:12px">
         <span>Vertebra:</span>
-        <select id="force-vertebra-select" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:14px">
+        <select id="force-vertebra-select" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:16px">
           <option value="">-- Select --</option>
         </select>
       </div>
-      <div id="force-vertebra-status" style="display:flex;gap:10px;justify-content:center;margin-bottom:12px;font-size:12px"></div>
+      <div id="force-vertebra-status" style="display:flex;gap:10px;justify-content:center;margin-bottom:12px;font-size:16px"></div>
     </div>
 
     <!-- Step 2: Weight capture -->
     <div id="force-capture-section" style="display:none">
-      <div style="font-size:13px;color:var(--accent);margin-bottom:8px" id="force-capturing-label">Calibrating: L3</div>
+      <div style="font-size:15px;color:var(--accent);margin-bottom:8px" id="force-capturing-label">Calibrating: L3</div>
       <div class="force-weight-input" id="force-weight-section">
         <span>Weight:</span>
         <input type="number" id="force-weight-input" value="300" min="1" max="10000" step="1">
         <span>grams</span>
         <span id="force-weight-newtons" style="color:var(--accent)">(= 2.943 N)</span>
       </div>
-      <div id="force-points-table" style="font-size:12px;margin-bottom:10px"></div>
+      <div id="force-points-table" style="font-size:16px;margin-bottom:10px"></div>
       <div class="force-result" id="force-result"></div>
     </div>
 
@@ -623,7 +569,7 @@
       <div style="text-align:center;margin:8px 0">
         <canvas id="force-curve-canvas" width="300" height="150" style="background:#141428;border-radius:4px;border:1px solid var(--border)"></canvas>
       </div>
-      <div id="force-equation" style="font-size:12px;color:var(--accent);text-align:center;margin-bottom:8px"></div>
+      <div id="force-equation" style="font-size:16px;color:var(--accent);text-align:center;margin-bottom:8px"></div>
     </div>
 
     <div class="force-actions">
@@ -662,13 +608,13 @@
   <input type="range" id="replay-scrub" min="0" max="100" value="0"
     style="flex:1;max-width:400px;accent-color:var(--accent)"
     oninput="scrubReplay(this.value)">
-  <select id="replay-speed" onchange="setReplaySpeed(this.value)" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px;font-size:12px">
+  <select id="replay-speed" onchange="setReplaySpeed(this.value)" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px;font-size:16px">
     <option value="0.5">0.5x</option>
     <option value="1" selected>1x</option>
     <option value="2">2x</option>
     <option value="4">4x</option>
   </select>
-  <span id="replay-frame-info" style="font-size:11px;color:var(--text-dim);min-width:180px">Frame 0/0</span>
+  <span id="replay-frame-info" style="font-size:16px;color:var(--text-dim);min-width:180px">Frame 0/0</span>
   <button class="btn btn-sm btn-danger" onclick="stopReplay()">Exit Replay</button>
 </div>
 
@@ -677,7 +623,7 @@
     background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:60">
   <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:24px 32px;min-width:400px;max-width:500px;max-height:70vh;overflow-y:auto">
     <h3 style="margin-bottom:12px">Replay Session</h3>
-    <div id="replay-session-list" style="font-size:13px;margin-bottom:12px">Loading...</div>
+    <div id="replay-session-list" style="font-size:15px;margin-bottom:12px">Loading...</div>
     <div style="display:flex;gap:10px;justify-content:center">
       <button class="btn" onclick="document.getElementById('replay-picker-modal').style.display='none'">Cancel</button>
     </div>
@@ -725,11 +671,6 @@
     </div>
 
     <div class="setting-row">
-      <label>Show Spine Overlay</label>
-      <input type="checkbox" id="set-spine-overlay" checked>
-    </div>
-
-    <div class="setting-row">
       <label>Show Row/Col Axis Labels</label>
       <input type="checkbox" id="set-axis-labels" checked>
     </div>
@@ -737,7 +678,7 @@
     <div class="setting-group">
       <label>Force Calibration</label>
       <div style="display:flex;gap:8px;align-items:center">
-        <span id="set-force-status" style="font-size:13px;color:var(--text-dim)">Not calibrated</span>
+        <span id="set-force-status" style="font-size:15px;color:var(--text-dim)">Not calibrated</span>
         <button class="btn btn-sm" onclick="closeSettings();openForceCalibration()">Calibrate</button>
         <button class="btn btn-sm btn-danger" id="set-force-clear-btn" onclick="clearForceCalUI()" style="display:none">Clear</button>
       </div>
@@ -749,11 +690,11 @@
         <button class="btn btn-sm btn-primary" onclick="closeSettings();openVertebraConfig()">Press to Configure</button>
         <button class="btn btn-sm" onclick="resetVertebraSettingsUI()">Reset Defaults</button>
       </div>
-      <div id="vertebra-settings-inputs" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-size:12px"></div>
+      <div id="vertebra-settings-inputs" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-size:16px"></div>
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn btn-sm" onclick="saveVertebraSettingsUI()">Save Manual Edits</button>
       </div>
-      <div id="vertebra-settings-status" style="font-size:11px;color:var(--success);min-height:1em;margin-top:2px"></div>
+      <div id="vertebra-settings-status" style="font-size:16px;color:var(--success);min-height:1em;margin-top:2px"></div>
     </div>
 
     <div class="setting-group">
@@ -773,7 +714,7 @@
 <div id="flash-modal">
   <div class="settings-panel" style="max-width:450px">
     <h3>Flash Firmware</h3>
-    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px">
+    <p style="font-size:15px;color:var(--text-dim);margin-bottom:16px">
       Flash the PressureMat firmware onto a connected ESP32-S3.<br>
       The serial connection will be closed during flashing.
     </p>
@@ -788,9 +729,9 @@
       <div class="flash-bar-track">
         <div class="flash-bar-fill" id="flash-bar"></div>
       </div>
-      <div id="flash-status" style="font-size:13px;text-align:center;color:var(--text-dim)"></div>
+      <div id="flash-status" style="font-size:15px;text-align:center;color:var(--text-dim)"></div>
     </div>
-    <p style="font-size:11px;color:var(--text-dim);margin-top:8px;font-style:italic">
+    <p style="font-size:16px;color:var(--text-dim);margin-top:8px;font-style:italic">
       If flash fails, hold the BOOT button on the ESP32 and try again.
     </p>
     <div class="settings-actions">
@@ -832,7 +773,6 @@ let sessionActive = false;
 let graphPreBuffering = false;
 let sessionStart = 0;
 let timerInterval = null;
-let showSpineOverlay = true;
 let showAxisLabels = true;
 
 // Settings
@@ -887,9 +827,8 @@ let forceGainMap = null;        // 40×30 gains from backend (legacy)
 let forceCalEnabled = false;    // checkbox state
 let forcePolyCoeffs = {};       // {'L1': [a0,a1,a2,a3], ...} per-vertebra polynomials
 
-// Spine
+// Vertebra labels (functional source of truth lives in vertebra_settings)
 const SPINE_LABELS = ['L1', 'L2', 'L3', 'L4', 'L5'];
-let spinePreviewMarkers = null;  // temp markers shown during preview
 
 // Vertebra settings (L1C-L5C with row/col/ext regions)
 const VERTEBRA_DEFAULTS = {
@@ -964,10 +903,6 @@ function applyLoadedSettings(s) {
   if (s.alert_volume !== undefined) alertVolume = s.alert_volume / 100;
   if (s.thresh_low !== undefined) threshLow = s.thresh_low;
   if (s.thresh_high !== undefined) threshHigh = s.thresh_high;
-  if (s.show_spine_overlay !== undefined) {
-    showSpineOverlay = s.show_spine_overlay;
-    document.getElementById('spine-overlay-toggle').checked = showSpineOverlay;
-  }
   if (s.show_axis_labels !== undefined) showAxisLabels = s.show_axis_labels;
   if (s.force_cal_enabled !== undefined) {
     forceCalEnabled = s.force_cal_enabled;
@@ -1114,8 +1049,8 @@ function resizeCanvas() {
   const availW = wrapper.clientWidth || window.innerWidth - 20;
   const availH = wrapper.clientHeight || 400;
 
-  LABEL_W = showAxisLabels ? 28 : 2;
-  LABEL_H = showAxisLabels ? 18 : 2;
+  LABEL_W = showAxisLabels ? 38 : 2;
+  LABEL_H = showAxisLabels ? 24 : 2;
 
   const scaleW = (availW - LABEL_W) / (ROWS * ROW_PITCH);
   const scaleH = (availH - LABEL_H) / (COLS * COL_PITCH);
@@ -1153,13 +1088,24 @@ function adcToForce(adc, row, col) {
   return adcToForceNum(adc, row, col).toFixed(2);
 }
 
+function vertebraCenter(label) {
+  // label can be "L1" or "L1C" — vertebraSettings is keyed L1C..L5C
+  const key = label.endsWith('C') ? label : label + 'C';
+  const v = vertebraSettings[key];
+  if (!v) return null;
+  if (v.row === 0 && v.col === 0) return null;
+  const ext = v.ext || 1;
+  return [v.row + (ext - 1) / 2, v.col + (ext - 1) / 2];
+}
+
 function getNearestCalibratedVertebra(row, col) {
-  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
   let best = null, bestDist = Infinity;
-  for (const [label, pos] of Object.entries(markers)) {
+  for (const label of SPINE_LABELS) {
     if (!forcePolyCoeffs[label]) continue;
-    const dr = (row - pos[0]) * 4.0;  // mm
-    const dc = (col - pos[1]) * 5.0;  // mm
+    const center = vertebraCenter(label);
+    if (!center) continue;
+    const dr = (row - center[0]) * 4.0;  // mm
+    const dc = (col - center[1]) * 5.0;  // mm
     const d = dr * dr + dc * dc;
     if (d < bestDist) { bestDist = d; best = label; }
   }
@@ -1176,8 +1122,8 @@ function drawGrid(data) {
 
   // Axis labels
   if (showAxisLabels) {
-    ctx.fillStyle = '#555';
-    ctx.font = `${Math.min(10, cellW - 1)}px monospace`;
+    ctx.fillStyle = '#888';
+    ctx.font = `${Math.min(14, cellW - 1)}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let sx = 0; sx < ROWS; sx++) {
@@ -1200,8 +1146,8 @@ function drawGrid(data) {
   let anyRed = false;
 
   // Determine if cells are big enough for text
-  const showText = cellDisplayMode !== 'none' && cellW >= 16 && cellH >= 12;
-  const textSize = Math.min(9, cellW - 3, cellH - 3);
+  const showText = cellDisplayMode !== 'none' && cellW >= 20 && cellH >= 16;
+  const textSize = Math.min(13, cellW - 4, cellH - 4);
 
   for (let sy = 0; sy < COLS; sy++) {
     for (let sx = 0; sx < ROWS; sx++) {
@@ -1260,93 +1206,11 @@ function drawGrid(data) {
     ctx.setLineDash([]);
   }
 
-  // Show spine overlay: use preview markers during calibration, otherwise normal
-  const activeMarkers = spinePreviewMarkers || (showSpineOverlay ? data.spine_markers : null);
-  if (activeMarkers) drawSpineOverlay(activeMarkers);
-
   // Vertebra region bounding boxes
   if (showVertebraRegions) drawVertebraRegions();
 
-  // Spine trail overlay during calibration scan
-  if (spineTrailGrid) {
-    drawSpineTrail();
-  }
-
   handleAlert(anyRed);
   document.getElementById('color-legend').style.display = hasRegion ? 'flex' : 'none';
-}
-
-function drawSpineTrail() {
-  const maxTrail = 3500;
-  for (let sy = 0; sy < COLS; sy++) {
-    for (let sx = 0; sx < ROWS; sx++) {
-      const row = ROWS - 1 - sx;
-      const col = COLS - 1 - sy;
-      const val = spineTrailGrid[row][col];
-      if (val <= 0) continue;
-      const ratio = Math.min(val / maxTrail, 1.0);
-      const x = LABEL_W + sx * cellW;
-      const y = LABEL_H + sy * cellH;
-      // Cyan overlay for trail
-      ctx.fillStyle = `rgba(0, 200, 255, ${0.15 + ratio * 0.6})`;
-      ctx.fillRect(x, y, cellW - 1, cellH - 1);
-    }
-  }
-  // Draw detected peaks if available
-  if (spineDetectedPeaks) {
-    for (const p of spineDetectedPeaks) {
-      const px = LABEL_W + (ROWS - 1 - p.row) * cellW + cellW / 2;
-      const py = LABEL_H + (COLS - 1 - p.col) * cellH + cellH / 2;
-      const r = Math.max(cellW, cellH) * 1.0;
-      ctx.beginPath();
-      ctx.arc(px, py, r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 100, 0, 0.3)';
-      ctx.fill();
-      ctx.strokeStyle = '#ff6400';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(p.label, px, py - r - 3);
-    }
-  }
-}
-
-function drawSpineOverlay(markers) {
-  const labels = Object.keys(markers).sort();
-  if (labels.length === 0) return;
-  const points = [];
-  for (const label of labels) {
-    const [row, col] = markers[label];
-    const px = LABEL_W + (ROWS - 1 - row) * cellW + cellW / 2;
-    const py = LABEL_H + (COLS - 1 - col) * cellH + cellH / 2;
-    points.push({ label, px, py });
-  }
-  if (points.length > 1) {
-    ctx.strokeStyle = 'rgba(0,255,136,0.5)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(points[0].px, points[0].py);
-    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].px, points[i].py);
-    ctx.stroke();
-  }
-  for (const pt of points) {
-    const r = Math.max(cellW, cellH) * 0.8;
-    ctx.beginPath();
-    ctx.arc(pt.px, pt.py, r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,255,136,0.15)';
-    ctx.fill();
-    ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(pt.label, pt.px, pt.py - r - 2);
-  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1370,10 +1234,10 @@ function drawVertebraRegions() {
     ctx.strokeRect(px, py, pw, ph);
 
     ctx.fillStyle = '#ff3333';
-    ctx.font = 'bold 10px sans-serif';
+    ctx.font = 'bold 14px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(label, px + pw / 2, py - 2);
+    ctx.fillText(label, px + pw / 2, py - 4);
   }
 }
 
@@ -1387,13 +1251,13 @@ function buildVertebraSettingsInputs() {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:6px;';
     row.innerHTML = `
-      <span style="width:32px;font-weight:bold;color:#aaa">${label}</span>
+      <span style="width:42px;font-weight:bold;color:#aaa;font-size:15px">${label}</span>
       R: <input type="number" id="vs-${label}-row" min="0" max="39" value="${v.row}"
-         style="width:50px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:2px 4px;text-align:center;font-size:12px">
+         style="width:70px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:3px 6px;text-align:center;font-size:16px">
       C: <input type="number" id="vs-${label}-col" min="0" max="29" value="${v.col}"
-         style="width:50px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:2px 4px;text-align:center;font-size:12px">
+         style="width:70px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:3px 6px;text-align:center;font-size:16px">
       Ext: <select id="vs-${label}-ext"
-         style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-size:12px">
+         style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:3px 6px;font-size:16px">
         <option value="1" ${v.ext===1?'selected':''}>1</option>
         <option value="2" ${v.ext===2?'selected':''}>2</option>
         <option value="3" ${v.ext===3?'selected':''}>3</option>
@@ -1518,16 +1382,6 @@ function updateDisplay(data) {
   overlay.style.display = data.calibrating ? 'flex' : 'none';
   if (data.vertebra_settings) vertebraSettings = data.vertebra_settings;
 
-  // Accumulate spine trail during scan
-  if (spineScanActive && spineTrailGrid && data.grid) {
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const v = data.grid[r] ? (data.grid[r][c] || 0) : 0;
-        if (v > spineTrailGrid[r][c]) spineTrailGrid[r][c] = v;
-      }
-    }
-  }
-
   drawGrid(data);
   document.getElementById('main-hz').textContent = data.hz.toFixed(1) + ' Hz';
 
@@ -1551,16 +1405,14 @@ function updateDisplay(data) {
 
 function updateNearestVertebra(data) {
   const el = document.getElementById('nearest-label');
-  const markers = data.spine_markers;
 
-  // Enable/disable L* exercises based on calibration
+  // Enable/disable L* exercises based on configured vertebra positions
   const sel = document.getElementById('exercise-select');
-  const hasCalibration = markers && Object.keys(markers).length > 0;
   for (let i = 0; i < sel.options.length; i++) {
     const opt = sel.options[i];
     if (opt.value !== 'Free Flow') {
       const target = opt.value.split(' ')[0]; // "L4"
-      opt.disabled = !hasCalibration || !markers[target];
+      opt.disabled = vertebraCenter(target) === null;
     }
   }
 
@@ -1574,22 +1426,10 @@ function updateNearestVertebra(data) {
   if (peakVal === 0) { el.style.display = 'none'; return; }
 
   let nearest = '', minDist = Infinity;
-
-  // Check spine markers first
-  if (markers && Object.keys(markers).length > 0) {
-    for (const [label, [mr, mc]] of Object.entries(markers)) {
-      const d = Math.sqrt((peakR - mr) ** 2 + (peakC - mc) ** 2);
-      if (d < minDist) { minDist = d; nearest = label; }
-    }
-  }
-
-  // Also check vertebra region settings (may be closer)
-  for (const label in vertebraSettings) {
-    const v = vertebraSettings[label];
-    if (v.row === 0 && v.col === 0) continue;
-    const cr = v.row + (v.ext - 1) / 2;
-    const cc = v.col + (v.ext - 1) / 2;
-    const d = Math.sqrt((peakR - cr) ** 2 + (peakC - cc) ** 2);
+  for (const label of SPINE_LABELS) {
+    const center = vertebraCenter(label);
+    if (!center) continue;
+    const d = Math.sqrt((peakR - center[0]) ** 2 + (peakC - center[1]) ** 2);
     if (d < minDist) { minDist = d; nearest = label; }
   }
 
@@ -1628,10 +1468,9 @@ function setNoiseFloor(val) {
 
 async function toggleSession() {
   if (!sessionActive) {
-    // Require spine calibration before starting a session
-    const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
-    if (Object.keys(markers).length === 0) {
-      showError('Please calibrate spine (L1-L5) before starting a session.');
+    // Refuse to start if baseline calibration is still running
+    if (latestData && latestData.calibrating) {
+      showError('Baseline calibration in progress — please wait a moment.');
       return;
     }
 
@@ -1647,7 +1486,12 @@ async function toggleSession() {
 
     // Start backend recording (CSV timing preserved — starts at GO!)
     const exercise = document.getElementById('exercise-select').value;
-    await pywebview.api.start_session(exercise);
+    const result = await pywebview.api.start_session(exercise);
+    if (result && result.success === false) {
+      graphPreBuffering = false;
+      showError(result.error || 'Failed to start session.');
+      return;
+    }
     graphPreBuffering = false;
     sessionActive = true;
     sessionStart = Date.now();
@@ -1749,276 +1593,6 @@ function closeResults() {
 async function openRecordings() { await pywebview.api.open_recordings_folder(); }
 
 // ═══════════════════════════════════════════════════════════
-// Spine Calibration — drag-scan with auto-detection
-// ═══════════════════════════════════════════════════════════
-
-// Trail: persistent max-value grid accumulated during scan
-let spineScanActive = false;
-let spineTrailGrid = null;  // [ROWS][COLS] max filtered values
-let spineDetectedPeaks = null;  // [{row, col, val, label}, ...]
-const SPINE_SCAN_DURATION = 8;  // seconds
-
-// Minimum spacing between vertebrae in grid cells
-// Real lumbar spacing ~30mm. Row pitch=4mm, col pitch=5mm.
-// Conservative min: 5 cells Euclidean distance (~20-25mm)
-const SPINE_MIN_SPACING = 5;
-
-function openSpineCalibration() {
-  spineTrailGrid = null;
-  spineDetectedPeaks = null;
-  spineScanActive = false;
-  document.getElementById('spine-modal').style.display = 'flex';
-  document.getElementById('spine-start-btn').style.display = '';
-  document.getElementById('spine-confirm-btn').style.display = 'none';
-  document.getElementById('spine-restart-btn').style.display = 'none';
-  document.getElementById('spine-instruction').innerHTML =
-    'Lie face-up on the mat and slowly roll/drag along your spine.<br>' +
-    'The heatmap will show a persistent trail of your movement.<br>' +
-    'The 5 strongest points will be auto-detected as L1–L5.';
-  document.getElementById('spine-progress').innerHTML = '';
-  document.getElementById('spine-result').textContent = '';
-}
-
-async function startSpineScan() {
-  const btn = document.getElementById('spine-start-btn');
-  btn.style.display = 'none';
-
-  // Initialize trail grid
-  spineTrailGrid = Array.from({length: ROWS}, () => new Float64Array(COLS));
-
-  // Countdown
-  document.getElementById('spine-instruction').textContent = 'Get ready...';
-  await runCountdown(3);
-
-  // Start scanning
-  spineScanActive = true;
-  document.getElementById('spine-instruction').textContent = 'Scanning... slowly roll along your spine';
-  document.getElementById('spine-result').textContent = '';
-
-  // Timer for scan duration
-  let remaining = SPINE_SCAN_DURATION;
-  const progressEl = document.getElementById('spine-progress');
-  const tickInterval = setInterval(() => {
-    remaining--;
-    progressEl.innerHTML = `<span style="font-size:24px;font-weight:700;color:var(--accent)">${remaining}s</span>`;
-    if (remaining <= 0) {
-      clearInterval(tickInterval);
-      finishSpineScan();
-    }
-  }, 1000);
-  progressEl.innerHTML = `<span style="font-size:24px;font-weight:700;color:var(--accent)">${remaining}s</span>`;
-}
-
-function finishSpineScan() {
-  spineScanActive = false;
-  playCountdownBeep(true);
-
-  // Auto-detect 5 peaks with spacing constraints
-  spineDetectedPeaks = detectVertebraePeaks(spineTrailGrid, 5, SPINE_MIN_SPACING);
-
-  if (spineDetectedPeaks.length < 2) {
-    document.getElementById('spine-instruction').textContent =
-      'Not enough pressure points detected. Try again — press more firmly and move slower.';
-    document.getElementById('spine-start-btn').style.display = '';
-    document.getElementById('spine-progress').innerHTML = '';
-    return;
-  }
-
-  // Temporarily set spine_markers on the live data so drawGrid renders the overlay
-  spinePreviewMarkers = {};
-  for (const p of spineDetectedPeaks) {
-    spinePreviewMarkers[p.label] = [p.row, p.col];
-  }
-
-  // Hide modal, show preview bar so user can see heatmap with trail + detected dots
-  document.getElementById('spine-modal').style.display = 'none';
-  const bar = document.getElementById('spine-preview-bar');
-  bar.style.display = 'flex';
-  document.getElementById('spine-preview-text').textContent =
-    'Detected: ' + spineDetectedPeaks.map(p => p.label).join(', ') +
-    ' — Review the orange dots on the heatmap, then Accept or Redo.';
-
-  // Force a redraw with the trail + peaks visible
-  if (latestData) drawGrid(latestData);
-}
-
-function detectVertebraePeaks(trail, count, minDist) {
-  // ── Clustering-based vertebra detection ──
-  // The trail is a linear band of pressure with natural gaps between vertebrae.
-  // Phase 1: Connected-component clustering at adaptive threshold
-  // Phase 2: Fallback to peak-seeded Voronoi if trail is too continuous
-
-  let maxVal = 0;
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      if (trail[r][c] > maxVal) maxVal = trail[r][c];
-  if (maxVal <= 0) return [];
-
-  // Phase 1: Try progressively lower thresholds until we get >= count clusters
-  const MIN_CLUSTER_CELLS = 3;  // ignore clusters smaller than this (noise)
-  let bestClusters = [];
-  for (let threshPct = 0.45; threshPct >= 0.15; threshPct -= 0.05) {
-    const clusters = findPressureClusters(trail, maxVal * threshPct);
-    const valid = clusters.filter(c => c.count >= MIN_CLUSTER_CELLS);
-    if (valid.length >= count) { bestClusters = valid; break; }
-    if (valid.length > bestClusters.length) bestClusters = valid;
-  }
-
-  // Phase 2: If not enough natural clusters, the trail is too continuous.
-  // Use greedy peak selection as seeds, then assign cells via nearest-seed
-  // (Voronoi) and compute weighted centroids per region.
-  if (bestClusters.length < count) {
-    bestClusters = peakSeededClustering(trail, count, minDist, maxVal * 0.15);
-  }
-
-  // Take top `count` by total weight (sum of pressure in cluster)
-  bestClusters.sort((a, b) => b.weight - a.weight);
-  let picked = bestClusters.slice(0, count);
-
-  // Sort by col DESCENDING: Col 29 = top of mat = L1 (most superior)
-  picked.sort((a, b) => b.col - a.col);
-
-  const labels = ['L1', 'L2', 'L3', 'L4', 'L5'];
-  return picked.map((p, i) => ({
-    row: Math.round(p.row),
-    col: Math.round(p.col),
-    val: Math.round(p.maxVal),
-    label: labels[i] || `L${i + 1}`,
-  }));
-}
-
-// Connected-component flood fill with 4-connectivity (preserves gaps)
-// Returns [{row, col (weighted centroid), weight, count, maxVal}, ...]
-function findPressureClusters(trail, threshold) {
-  const visited = Array.from({length: ROWS}, () => new Uint8Array(COLS));
-  const clusters = [];
-
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (visited[r][c] || trail[r][c] < threshold) continue;
-      // BFS flood fill — 4-connectivity so diagonal gaps separate clusters
-      const queue = [[r, c]];
-      visited[r][c] = 1;
-      let sumR = 0, sumC = 0, sumW = 0, cellCount = 0, peak = 0;
-      while (queue.length > 0) {
-        const [cr, cc] = queue.shift();
-        const w = trail[cr][cc];
-        sumR += cr * w;
-        sumC += cc * w;
-        sumW += w;
-        cellCount++;
-        if (w > peak) peak = w;
-        for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
-          const nr = cr + dr, nc = cc + dc;
-          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS
-              && !visited[nr][nc] && trail[nr][nc] >= threshold) {
-            visited[nr][nc] = 1;
-            queue.push([nr, nc]);
-          }
-        }
-      }
-      clusters.push({
-        row: sumR / sumW,   // pressure-weighted centroid
-        col: sumC / sumW,
-        weight: sumW,
-        count: cellCount,
-        maxVal: peak,
-      });
-    }
-  }
-  return clusters;
-}
-
-// Fallback: greedy peak selection → Voronoi assignment → weighted centroids
-function peakSeededClustering(trail, count, minDist, threshold) {
-  // 1. Build candidate list above threshold, sorted by pressure descending
-  const candidates = [];
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      if (trail[r][c] >= threshold)
-        candidates.push({row: r, col: c, val: trail[r][c]});
-  candidates.sort((a, b) => b.val - a.val);
-
-  // 2. Greedy pick seeds with minimum spacing
-  const seeds = [];
-  for (const cand of candidates) {
-    if (seeds.length >= count) break;
-    let tooClose = false;
-    for (const s of seeds) {
-      const dr = (cand.row - s.row) * 4;  // mm
-      const dc = (cand.col - s.col) * 5;  // mm
-      if (Math.sqrt(dr * dr + dc * dc) < minDist * 4) { tooClose = true; break; }
-    }
-    if (!tooClose) seeds.push(cand);
-  }
-  if (seeds.length === 0) return [];
-
-  // 3. Assign each above-threshold cell to nearest seed (Voronoi), compute centroids
-  const accum = seeds.map(() => ({sumR: 0, sumC: 0, sumW: 0, count: 0, maxVal: 0}));
-  for (const cand of candidates) {
-    let bestIdx = 0, bestDist = Infinity;
-    for (let i = 0; i < seeds.length; i++) {
-      const dr = (cand.row - seeds[i].row) * 4;
-      const dc = (cand.col - seeds[i].col) * 5;
-      const d = dr * dr + dc * dc;
-      if (d < bestDist) { bestDist = d; bestIdx = i; }
-    }
-    const a = accum[bestIdx];
-    a.sumR += cand.row * cand.val;
-    a.sumC += cand.col * cand.val;
-    a.sumW += cand.val;
-    a.count++;
-    if (cand.val > a.maxVal) a.maxVal = cand.val;
-  }
-
-  return accum
-    .filter(a => a.sumW > 0)
-    .map(a => ({
-      row: a.sumR / a.sumW,
-      col: a.sumC / a.sumW,
-      weight: a.sumW,
-      count: a.count,
-      maxVal: a.maxVal,
-    }));
-}
-
-async function acceptSpinePreview() {
-  if (!spineDetectedPeaks) return;
-  const markers = {};
-  for (const p of spineDetectedPeaks) {
-    markers[p.label] = [p.row, p.col];
-  }
-  await pywebview.api.set_spine_markers(markers);
-  // Clean up preview state
-  spineTrailGrid = null;
-  spineDetectedPeaks = null;
-  spinePreviewMarkers = null;
-  document.getElementById('spine-preview-bar').style.display = 'none';
-}
-
-function redoSpinePreview() {
-  spineTrailGrid = null;
-  spineDetectedPeaks = null;
-  spinePreviewMarkers = null;
-  document.getElementById('spine-preview-bar').style.display = 'none';
-  pywebview.api.clear_calibration();
-  openSpineCalibration();
-}
-
-// Legacy — kept for modal confirm/cancel buttons
-async function confirmSpine() { await acceptSpinePreview(); }
-function restartSpine() { redoSpinePreview(); }
-
-function cancelSpine() {
-  spineScanActive = false;
-  spineTrailGrid = null;
-  spineDetectedPeaks = null;
-  spinePreviewMarkers = null;
-  document.getElementById('spine-modal').style.display = 'none';
-  document.getElementById('spine-preview-bar').style.display = 'none';
-}
-
-// ═══════════════════════════════════════════════════════════
 // Time-Series Graph — with colored background zones
 // ═══════════════════════════════════════════════════════════
 
@@ -2036,7 +1610,6 @@ function resetGraph() {
 
 function updateGraph(data) {
   let trackVal = 0;
-  const markers = data.spine_markers || {};
   const exercise = document.getElementById('exercise-select').value;
   const grid = mode === 'raw' ? data.raw : data.grid;
   const useForceSum = forceCalEnabled && Object.keys(forcePolyCoeffs).length > 0;
@@ -2045,9 +1618,12 @@ function updateGraph(data) {
     // Force summation mode: sum force across all lumbar vertebra regions
     const margin = 3;
     const visited = new Set();
-    for (const [label, pos] of Object.entries(markers)) {
+    for (const label of SPINE_LABELS) {
       if (!forcePolyCoeffs[label]) continue;
-      const [mr, mc] = pos;
+      const center = vertebraCenter(label);
+      if (!center) continue;
+      const mr = Math.round(center[0]);
+      const mc = Math.round(center[1]);
       for (let r = Math.max(0, mr - margin); r <= Math.min(ROWS - 1, mr + margin); r++) {
         for (let c = Math.max(0, mc - margin); c <= Math.min(COLS - 1, mc + margin); c++) {
           const key = r * COLS + c;
@@ -2072,8 +1648,10 @@ function updateGraph(data) {
       graphCurrentLabel = 'Peak';
     } else {
       const target = exercise.split(' ')[0];
-      if (markers[target]) {
-        const [tr, tc] = markers[target];
+      const center = vertebraCenter(target);
+      if (center) {
+        const tr = Math.round(center[0]);
+        const tc = Math.round(center[1]);
         const margin = 3;
         for (let r = Math.max(0, tr - margin); r <= Math.min(ROWS - 1, tr + margin); r++) {
           for (let c = Math.max(0, tc - margin); c <= Math.min(COLS - 1, tc + margin); c++) {
@@ -2093,18 +1671,25 @@ function updateGraph(data) {
     }
 
     // Override with pinned tracking
-    if (graphTracking !== 'auto' && markers[graphTracking]) {
-      const [r, c] = markers[graphTracking];
-      trackVal = grid[r] ? (grid[r][c] || 0) : 0;
-      graphCurrentLabel = graphTracking;
+    if (graphTracking !== 'auto') {
+      const center = vertebraCenter(graphTracking);
+      if (center) {
+        const r = Math.round(center[0]);
+        const c = Math.round(center[1]);
+        trackVal = grid[r] ? (grid[r][c] || 0) : 0;
+        graphCurrentLabel = graphTracking;
+      }
     }
   }
 
   // Detect which vertebra has peak pressure (for location tracking)
   let peakVertebra = '';
   let peakVertebraVal = 0;
-  for (const [label, pos] of Object.entries(markers)) {
-    const [mr, mc] = pos;
+  for (const label of SPINE_LABELS) {
+    const center = vertebraCenter(label);
+    if (!center) continue;
+    const mr = Math.round(center[0]);
+    const mc = Math.round(center[1]);
     const v = grid[mr] ? (grid[mr][mc] || 0) : 0;
     if (v > peakVertebraVal) { peakVertebraVal = v; peakVertebra = label; }
   }
@@ -2127,8 +1712,8 @@ const VERTEBRA_COLORS = { L1: '#e74c3c', L2: '#e67e22', L3: '#f1c40f', L4: '#2ec
 function drawGraph() {
   const w = graphCanvas.width;
   const h = graphCanvas.height;
-  const locBandH = 22;  // height for vertebra location band
-  const pad = { top: 8, right: 10, bottom: 20 + locBandH, left: 46 };
+  const locBandH = 24;  // height for vertebra location band
+  const pad = { top: 10, right: 12, bottom: 24 + locBandH, left: 60 };
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
 
@@ -2185,8 +1770,8 @@ function drawGraph() {
     graphCtx.moveTo(pad.left, gy);
     graphCtx.lineTo(pad.left + plotW, gy);
     graphCtx.stroke();
-    graphCtx.fillStyle = '#555';
-    graphCtx.font = '10px monospace';
+    graphCtx.fillStyle = '#888';
+    graphCtx.font = '13px monospace';
     graphCtx.textAlign = 'right';
     graphCtx.textBaseline = 'middle';
     graphCtx.fillText(graphForceMode ? v.toFixed(1) + yUnit : v, pad.left - 4, gy);
@@ -2256,24 +1841,24 @@ function drawGraph() {
     }
   }
 
-  // Location band legend (small, right-aligned)
-  graphCtx.font = '8px monospace';
+  // Location band legend (right-aligned)
+  graphCtx.font = '12px monospace';
   graphCtx.textBaseline = 'middle';
   let lx = pad.left + plotW - 5;
   for (const label of ['L5', 'L4', 'L3', 'L2', 'L1']) {
     if (!VERTEBRA_COLORS[label]) continue;
     const tw = graphCtx.measureText(label).width;
-    lx -= tw + 12;
+    lx -= tw + 14;
     graphCtx.fillStyle = VERTEBRA_COLORS[label];
-    graphCtx.fillRect(lx, bandY + 2, 6, 6);
-    graphCtx.fillText(label, lx + 8, bandY + 5);
+    graphCtx.fillRect(lx, bandY + 4, 8, 8);
+    graphCtx.fillText(label, lx + 11, bandY + locBandH / 2);
   }
 
   // X label
-  graphCtx.fillStyle = '#555';
-  graphCtx.font = '10px sans-serif';
+  graphCtx.fillStyle = '#888';
+  graphCtx.font = '13px sans-serif';
   graphCtx.textAlign = 'center';
-  graphCtx.fillText(graphForceMode ? 'Time — Total Lumbar Force' : 'Time (scrolling)', pad.left + plotW / 2, h - 3);
+  graphCtx.fillText(graphForceMode ? 'Time — Total Lumbar Force' : 'Time (scrolling)', pad.left + plotW / 2, h - 5);
 }
 
 function setGraphMode(m) {
@@ -2291,12 +1876,12 @@ function updateTrackingLabel() {
 }
 
 document.getElementById('tracking-label').addEventListener('click', () => {
-  const markers = latestData && latestData.spine_markers ? Object.keys(latestData.spine_markers).sort() : [];
-  if (markers.length === 0) return;
-  if (graphTracking === 'auto') graphTracking = markers[0];
+  const labels = SPINE_LABELS.filter(l => vertebraCenter(l) !== null);
+  if (labels.length === 0) return;
+  if (graphTracking === 'auto') graphTracking = labels[0];
   else {
-    const idx = markers.indexOf(graphTracking);
-    graphTracking = (idx < 0 || idx >= markers.length - 1) ? 'auto' : markers[idx + 1];
+    const idx = labels.indexOf(graphTracking);
+    graphTracking = (idx < 0 || idx >= labels.length - 1) ? 'auto' : labels[idx + 1];
   }
   updateTrackingLabel();
 });
@@ -2314,7 +1899,6 @@ async function openSettings() {
   document.getElementById('set-vol-val').textContent = Math.round(alertVolume * 100);
   document.getElementById('set-thresh-high').value = threshHigh;
   document.getElementById('set-thresh-low').value = threshLow;
-  document.getElementById('set-spine-overlay').checked = showSpineOverlay;
   document.getElementById('set-axis-labels').checked = showAxisLabels;
   document.getElementById('vertebra-regions-toggle').checked = showVertebraRegions;
   buildVertebraSettingsInputs();
@@ -2353,8 +1937,6 @@ async function saveSettingsUI() {
   alertVolume = parseInt(document.getElementById('set-alert-volume').value) / 100;
   threshHigh = parseInt(document.getElementById('set-thresh-high').value) || 2500;
   threshLow = parseInt(document.getElementById('set-thresh-low').value) || 1000;
-  showSpineOverlay = document.getElementById('set-spine-overlay').checked;
-  document.getElementById('spine-overlay-toggle').checked = showSpineOverlay;
   showAxisLabels = document.getElementById('set-axis-labels').checked;
 
   // Apply noise floor
@@ -2374,7 +1956,6 @@ async function saveSettingsUI() {
       alert_volume: Math.round(alertVolume * 100),
       thresh_low: threshLow,
       thresh_high: threshHigh,
-      show_spine_overlay: showSpineOverlay,
       show_axis_labels: showAxisLabels,
       force_cal_enabled: forceCalEnabled,
     });
@@ -2692,12 +2273,6 @@ let forceCalVertebra = null;     // 'L1'-'L5' currently calibrating
 let forceCalPoints = [];          // [{weight_grams, peak_adc}, ...]
 
 function openForceCalibration() {
-  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
-  if (Object.keys(markers).length === 0) {
-    showError('Please calibrate spine (L1-L5) first before force calibration.');
-    return;
-  }
-
   document.getElementById('force-cal-modal').style.display = 'flex';
   document.getElementById('force-vertebra-section').style.display = '';
   document.getElementById('force-capture-section').style.display = 'none';
@@ -2712,11 +2287,11 @@ function openForceCalibration() {
   document.getElementById('force-instruction').textContent =
     'Select a vertebra, then add multiple known weights to build a calibration curve.';
 
-  // Populate vertebra dropdown
+  // Populate vertebra dropdown from configured vertebra positions
   const sel = document.getElementById('force-vertebra-select');
   sel.innerHTML = '<option value="">-- Select --</option>';
-  for (const label of ['L1', 'L2', 'L3', 'L4', 'L5']) {
-    if (markers[label]) {
+  for (const label of SPINE_LABELS) {
+    if (vertebraCenter(label)) {
       sel.innerHTML += `<option value="${label}">${label}</option>`;
     }
   }
@@ -2727,10 +2302,9 @@ function openForceCalibration() {
 }
 
 function updateForceVertebraStatus() {
-  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
   let html = '';
-  for (const label of ['L1', 'L2', 'L3', 'L4', 'L5']) {
-    if (!markers[label]) continue;
+  for (const label of SPINE_LABELS) {
+    if (!vertebraCenter(label)) continue;
     const hasCal = forcePolyCoeffs[label] ? true : false;
     const color = hasCal ? 'var(--success)' : 'var(--text-dim)';
     const icon = hasCal ? '&#10003;' : '&#9675;';
@@ -2775,7 +2349,7 @@ function updateForcePointsTable() {
     document.getElementById('force-points-table').innerHTML = '<span style="color:var(--text-dim)">No points captured yet. Need at least 2 (recommend 4+).</span>';
     return;
   }
-  let html = '<table style="width:100%;font-size:12px;border-collapse:collapse"><tr style="color:var(--text-dim)"><th>#</th><th>Weight</th><th>Force</th><th>ADC</th></tr>';
+  let html = '<table style="width:100%;font-size:16px;border-collapse:collapse"><tr style="color:var(--text-dim)"><th>#</th><th>Weight</th><th>Force</th><th>ADC</th></tr>';
   forceCalPoints.forEach((p, i) => {
     const fn = ((p.weight_grams / 1000.0) * 9.81).toFixed(3);
     html += `<tr><td>${i + 1}</td><td>${p.weight_grams}g</td><td>${fn} N</td><td>${p.peak_adc}</td></tr>`;
@@ -2917,10 +2491,10 @@ function drawForceCurvePreview(coeffs, points) {
   }
 
   // Axes labels
-  ctx.fillStyle = '#555';
-  ctx.font = '9px monospace';
+  ctx.fillStyle = '#888';
+  ctx.font = '13px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('ADC', pad.left + pw / 2, h - 3);
+  ctx.fillText('ADC', pad.left + pw / 2, h - 5);
   ctx.save();
   ctx.translate(10, pad.top + ph / 2);
   ctx.rotate(-Math.PI / 2);
@@ -2944,10 +2518,9 @@ async function acceptForceCalibrationNew() {
 
 function calibrateNextVertebra() {
   // Find next uncalibrated vertebra
-  const markers = latestData && latestData.spine_markers ? latestData.spine_markers : {};
   let next = null;
-  for (const label of ['L1', 'L2', 'L3', 'L4', 'L5']) {
-    if (markers[label] && !forcePolyCoeffs[label]) { next = label; break; }
+  for (const label of SPINE_LABELS) {
+    if (vertebraCenter(label) && !forcePolyCoeffs[label]) { next = label; break; }
   }
   if (!next) {
     document.getElementById('force-instruction').textContent = 'All vertebrae calibrated!';
@@ -3005,7 +2578,7 @@ async function openReplayPicker() {
       const types = Object.keys(session.files).join(', ');
       html += `<div style="padding:8px;border:1px solid var(--border);border-radius:4px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center"
         onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">`;
-      html += `<span>${session.name} <span style="color:var(--text-dim);font-size:11px">(${types})</span></span>`;
+      html += `<span>${session.name} <span style="color:var(--text-dim);font-size:16px">(${types})</span></span>`;
       html += `<div style="display:flex;gap:4px">`;
       if (session.files.filtered) {
         html += `<button class="btn btn-sm btn-primary" onclick="startReplay('${session.files.filtered.replace(/\\/g, '\\\\')}')">Filtered</button>`;
@@ -3075,7 +2648,6 @@ function renderReplayFrame(idx) {
     hz: 0,
     pressed: 0,
     calibrating: false,
-    spine_markers: latestData ? latestData.spine_markers || {} : {},
     exercise_region: null,
     vertebra_settings: latestData ? latestData.vertebra_settings || {} : {},
   };

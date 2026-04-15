@@ -39,6 +39,7 @@ class PressureBackend:
         self.pressed = 0
         self.noise_floor = 200
         self.lock = threading.Lock()
+        self._settings_lock = threading.Lock()
 
         # Serial
         self.ser = None
@@ -53,16 +54,12 @@ class PressureBackend:
         self.session_start_time = 0.0
         self.session_frames = []  # list of (timestamp_ms, flat_grid_raw, flat_grid_filtered)
 
-        # Spine calibration
-        self.spine_markers = {}  # {'L1': [row, col], ...}
-        self._spine_cal_label = None
-        self._spine_cal_frames = []
-        self._spine_calibrating = False
-
         # Force calibration (legacy linear gain map kept for backward compat)
         self.force_gain_map = None          # 40×30 list of floats, or None
         self._force_cal_frames = []
         self._force_calibrating = False
+        self._force_cal_done = threading.Event()
+        self._force_cal_target_frames = 0
 
         # Polynomial force calibration (per-vertebra cubic)
         self.force_poly_coeffs = {}         # {'L3': [a0,a1,a2,a3], ...}
@@ -90,7 +87,6 @@ class PressureBackend:
         os.makedirs(self._data_dir, exist_ok=True)
 
         self._recordings_dir = os.path.join(self._data_dir, "recordings")
-        self._cal_path = os.path.join(self._data_dir, "spine_calibration.json")
         self._force_cal_path = os.path.join(self._data_dir, "force_calibration.json")
         self._settings_path = os.path.join(self._data_dir, "settings.json")
         self._vertebra_settings_path = os.path.join(self._data_dir, "vertebra_settings.json")
@@ -114,9 +110,8 @@ class PressureBackend:
         self._debug_mode = False
 
         # Load saved calibrations
-        self.load_spine_calibration()
-        self.load_poly_force_calibration()
         self.load_vertebra_settings()
+        self.load_poly_force_calibration()
 
     # ── Serial ──────────────────────────────────────────────────────
 
@@ -172,6 +167,11 @@ class PressureBackend:
             except Exception:
                 pass
             self.ser = None
+        with self.lock:
+            # Drop calibration state so the UI can recover cleanly on reconnect
+            self.calibrating = False
+            self.cal_count = 0
+            self.cal_accum = [[0] * self.COLS for _ in range(self.ROWS)]
         log.info("Disconnected")
         return {"success": True}
 
@@ -286,6 +286,9 @@ class PressureBackend:
             except serial.SerialException:
                 log.warning("Serial disconnected")
                 self.connected = False
+                with self.lock:
+                    self.calibrating = False
+                    self.cal_count = 0
                 break
             except Exception as e:
                 log.error("Parse error: %s", e)
@@ -307,6 +310,15 @@ class PressureBackend:
                         self.baseline[r][c] = self.cal_accum[r][c] // self.cal_count
                 self.calibrating = False
                 log.info("Baseline captured (%d scans averaged)", self.cal_count)
+            # Don't expose filtered values until baseline is ready — otherwise
+            # the first ~10 frames subtract a zero baseline and look like a
+            # full-press. Keep grid_filtered clean while calibrating.
+            for r in range(self.ROWS):
+                for c in range(self.COLS):
+                    self.grid_filtered[r][c] = 0
+            self.pressed = 0
+            return
+
         self._apply_filter()
 
         # Session recording
@@ -319,19 +331,17 @@ class PressureBackend:
                 filt_flat.extend(self.grid_filtered[r])
             self.session_frames.append((ts, raw_flat, filt_flat))
 
-        # Spine calibration capture
-        if self._spine_calibrating:
-            filt_flat = []
-            for r in range(self.ROWS):
-                filt_flat.extend(self.grid_filtered[r])
-            self._spine_cal_frames.append(filt_flat)
-
         # Force calibration capture
         if self._force_calibrating:
             filt_flat = []
             for r in range(self.ROWS):
                 filt_flat.extend(self.grid_filtered[r])
             self._force_cal_frames.append(filt_flat)
+            self._force_cal_target_frames = max(
+                self._force_cal_target_frames, len(self._force_cal_frames)
+            )
+            if len(self._force_cal_frames) >= 30:
+                self._force_cal_done.set()
 
     def _apply_filter(self):
         """Subtract baseline and apply noise floor."""
@@ -357,6 +367,9 @@ class PressureBackend:
     def start_session(self, exercise="Free Flow"):
         """Begin recording frames."""
         with self.lock:
+            if self.calibrating:
+                log.warning("start_session refused: baseline calibration in progress")
+                return {"success": False, "error": "Baseline calibration in progress"}
             self.session_exercise = exercise
             self.session_frames = []
             self.session_start_time = time.time()
@@ -364,7 +377,7 @@ class PressureBackend:
             # Update exercise region
             self.exercise_region = self.get_exercise_region(exercise)
         log.info("Session started: %s", exercise)
-        return True
+        return {"success": True}
 
     def stop_session(self):
         """Stop recording, write CSVs, return summary."""
@@ -445,96 +458,40 @@ class PressureBackend:
         log.info("CSVs written: %s", raw_path)
         return raw_path, filt_path, force_path
 
-    # ── Spine Calibration ───────────────────────────────────────────
+    # ── Vertebra position lookup ────────────────────────────────────
 
-    def start_spine_calibration(self, label):
-        """Capture ~20 frames and find peak cell for a vertebra label."""
-        with self.lock:
-            self._spine_cal_label = label
-            self._spine_cal_frames = []
-            self._spine_calibrating = True
+    def _vertebra_center(self, label):
+        """Return (row, col) center for a vertebra label.
 
-        # Wait for frames to accumulate
-        time.sleep(1.2)  # ~20 frames at 17.8 Hz
-
-        with self.lock:
-            self._spine_calibrating = False
-            frames = self._spine_cal_frames
-            self._spine_cal_frames = []
-
-        if not frames:
+        Accepts "L1" or "L1C" — vertebra_settings is keyed L1C..L5C.
+        Returns None if the entry is missing or marked unconfigured (0,0).
+        """
+        key = label if label.endswith("C") else label + "C"
+        v = self.vertebra_settings.get(key)
+        if not v:
             return None
-
-        # Average the captured frames
-        n = len(frames)
-        cells = self.ROWS * self.COLS
-        avg = [0.0] * cells
-        for flat in frames:
-            for i in range(cells):
-                avg[i] += flat[i]
-        for i in range(cells):
-            avg[i] /= n
-
-        # Find peak cell
-        peak_idx = max(range(cells), key=lambda i: avg[i])
-        peak_row = peak_idx // self.COLS
-        peak_col = peak_idx % self.COLS
-
-        with self.lock:
-            self.spine_markers[label] = [peak_row, peak_col]
-
-        log.info("Spine %s: R%d C%d (avg %.0f, %d frames)",
-                 label, peak_row, peak_col, avg[peak_idx], n)
-        self.save_spine_calibration()
-        return {"row": peak_row, "col": peak_col, "label": label}
-
-    def save_spine_calibration(self):
-        """Persist spine markers to JSON."""
-        with self.lock:
-            data = dict(self.spine_markers)
-        with open(self._cal_path, "w") as f:
-            json.dump(data, f, indent=2)
-        log.info("Spine calibration saved: %s", self._cal_path)
-
-    def load_spine_calibration(self):
-        """Load spine markers from JSON if exists."""
-        if os.path.exists(self._cal_path):
-            try:
-                with open(self._cal_path) as f:
-                    self.spine_markers = json.load(f)
-                log.info("Spine calibration loaded: %s", self.spine_markers)
-            except Exception as e:
-                log.warning("Failed to load calibration: %s", e)
-
-    def set_spine_markers(self, markers):
-        """Directly set spine markers dict (from JS auto-detection) and save."""
-        with self.lock:
-            self.spine_markers = markers
-        self.save_spine_calibration()
-        log.info("Spine markers set: %s", markers)
-
-    def clear_spine_calibration(self):
-        """Remove all spine markers."""
-        with self.lock:
-            self.spine_markers = {}
-        if os.path.exists(self._cal_path):
-            os.remove(self._cal_path)
+        row, col, ext = v.get("row", 0), v.get("col", 0), v.get("ext", 1) or 1
+        if row == 0 and col == 0:
+            return None
+        # Center of the ext×ext square the user configured
+        return (row + (ext - 1) // 2, col + (ext - 1) // 2)
 
     def get_exercise_region(self, exercise):
         """Return (rmin, rmax, cmin, cmax) for exercise, or None."""
-        # Map exercise to target vertebra
         exercise_targets = {
+            "L1 Mobilization": "L1",
+            "L2 Mobilization": "L2",
+            "L3 Mobilization": "L3",
             "L4 Mobilization": "L4",
             "L5 Mobilization": "L5",
-            "L3 Mobilization": "L3",
-            "L2 Mobilization": "L2",
-            "L1 Mobilization": "L1",
         }
         target = exercise_targets.get(exercise)
-        if not target or target not in self.spine_markers:
+        if not target:
             return None
-
-        row, col = self.spine_markers[target]
+        center = self._vertebra_center(target)
+        if center is None:
+            return None
+        row, col = center
         margin = 3
         rmin = max(0, row - margin)
         rmax = min(self.ROWS - 1, row + margin)
@@ -549,11 +506,15 @@ class PressureBackend:
         with self.lock:
             self._force_cal_frames = []
             self._force_calibrating = True
+        self._force_cal_done.clear()
 
     def stop_force_capture(self):
-        """Stop capture, average frames, find global peak. Returns dict."""
-        # Let frames accumulate for ~2s
-        time.sleep(2.0)
+        """Stop capture, average frames, find global peak. Returns dict.
+
+        Waits up to 2.5s for ~30 frames at 17.8 Hz, but returns as soon as
+        the target frame count is reached so the UI doesn't freeze.
+        """
+        self._force_cal_done.wait(timeout=2.5)
 
         with self.lock:
             self._force_calibrating = False
@@ -729,7 +690,8 @@ class PressureBackend:
                     max_row = row
             aug[col], aug[max_row] = aug[max_row], aug[col]
             if abs(aug[col][col]) < 1e-12:
-                continue
+                # Singular system — calibration points are collinear/duplicated
+                return None
             # Eliminate
             for row in range(col + 1, order):
                 factor = aug[row][col] / aug[col][col]
@@ -740,8 +702,7 @@ class PressureBackend:
         coeffs = [0.0] * order
         for i in range(order - 1, -1, -1):
             if abs(aug[i][i]) < 1e-12:
-                coeffs[i] = 0.0
-                continue
+                return None
             s = aug[i][order]
             for j in range(i + 1, order):
                 s -= aug[i][j] * coeffs[j]
@@ -777,15 +738,18 @@ class PressureBackend:
             # Linear: force = a0 + a1*adc
             x1, x2 = xs
             y1, y2 = ys
-            a1 = (y2 - y1) / (x2 - x1) if x2 != x1 else 0
+            if x2 == x1:
+                log.warning("Force calibration failed: duplicate ADC values (%g)", x1)
+                return None
+            a1 = (y2 - y1) / (x2 - x1)
             a0 = y1 - a1 * x1
             coeffs = [a0, a1, 0.0, 0.0]
-        elif len(xs) == 3:
-            # Quadratic: use polyfit3 but result will have a3≈0
-            coeffs = self._polyfit3(xs, ys)
         else:
-            # Full cubic fit
+            # Quadratic (3 points) or full cubic (4+) — both via _polyfit3
             coeffs = self._polyfit3(xs, ys)
+            if coeffs is None:
+                log.warning("Force calibration failed: collinear/singular points")
+                return None
 
         # Store
         with self.lock:
@@ -811,8 +775,9 @@ class PressureBackend:
             except Exception:
                 pass
 
-        # Get vertebra position from spine markers
-        pos = self.spine_markers.get(vertebra, [0, 0])
+        # Get vertebra position from vertebra_settings (the source of truth)
+        center = self._vertebra_center(vertebra)
+        row, col = center if center else (0, 0)
         data["timestamp"] = datetime.now().isoformat(timespec="seconds")
         data["calibrations"][vertebra] = {
             "points": [
@@ -821,8 +786,8 @@ class PressureBackend:
                 for p in cal_points if p.get("peak_adc", 0) > 0
             ],
             "coefficients": coeffs,
-            "row": pos[0] if pos else 0,
-            "col": pos[1] if pos else 0,
+            "row": row,
+            "col": col,
         }
         with open(self._force_cal_path, "w") as f:
             json.dump(data, f, indent=2)
@@ -1074,18 +1039,35 @@ class PressureBackend:
 
     def load_settings(self):
         """Load settings from JSON."""
-        if os.path.exists(self._settings_path):
-            try:
-                with open(self._settings_path) as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {}
+        with self._settings_lock:
+            if os.path.exists(self._settings_path):
+                try:
+                    with open(self._settings_path) as f:
+                        return json.load(f)
+                except Exception:
+                    pass
+            return {}
 
     def save_settings(self, data):
-        """Save settings to JSON."""
-        with open(self._settings_path, "w") as f:
-            json.dump(data, f, indent=2)
+        """Save settings to JSON (full replace)."""
+        with self._settings_lock:
+            with open(self._settings_path, "w") as f:
+                json.dump(data, f, indent=2)
+
+    def update_settings(self, updates):
+        """Atomic read-modify-write of settings.json under the settings lock."""
+        with self._settings_lock:
+            current = {}
+            if os.path.exists(self._settings_path):
+                try:
+                    with open(self._settings_path) as f:
+                        current = json.load(f)
+                except Exception:
+                    current = {}
+            current.update(updates)
+            with open(self._settings_path, "w") as f:
+                json.dump(current, f, indent=2)
+            return current
 
     # ── WebSocket Server ────────────────────────────────────────────
 
@@ -1107,7 +1089,6 @@ class PressureBackend:
                             "pressed": self.pressed,
                             "calibrating": self.calibrating,
                             "noise_floor": self.noise_floor,
-                            "spine_markers": dict(self.spine_markers),
                             "exercise_region": self.exercise_region,
                             "session_active": self.session_active,
                             "vertebra_settings": dict(self.vertebra_settings),
@@ -1167,7 +1148,7 @@ class PressureBackend:
                 return
             except OSError:
                 log.warning("Port %d in use, trying next...", port)
-        log.error("Could not bind WebSocket server on any port 8765-8774")
+        raise RuntimeError("WebSocket bind failed: ports 8765-8774 all in use")
 
     def start_ws_server(self):
         """Run the asyncio event loop with WS server in current thread."""

@@ -19,7 +19,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[
         'PyQt5', 'PyQt6', 'PySide2', 'PySide6',
-        'tkinter', 'unittest', 'test',
+        'unittest', 'test',
     ],
     noarchive=False,
 )
